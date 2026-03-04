@@ -70,8 +70,8 @@ export default function LoginPage() {
   return (
     <div className="w-full max-w-sm">
       <div className="mb-10 text-center">
-        <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-julius-accent">
-          <span className="text-3xl font-bold text-white">J</span>
+        <div className="mx-auto mb-4 h-20 w-20 overflow-hidden rounded-full">
+          <img src="/julius.png" alt="Julius" className="h-full w-full object-cover" />
         </div>
         <h1 className="text-3xl font-bold text-julius-text">JULIUS</h1>
         <p className="mt-1 text-sm text-julius-muted">O teu agente financeiro pessoal</p>
