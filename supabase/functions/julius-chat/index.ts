@@ -61,6 +61,16 @@ interface RequestBody {
   historico: HistoricoItem[]
 }
 
+function getJWTUserId(jwt: string): string | null {
+  try {
+    const payload = jwt.split('.')[1]
+    const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')))
+    return decoded.sub ?? null
+  } catch {
+    return null
+  }
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -75,20 +85,20 @@ Deno.serve(async (req: Request) => {
       })
     }
 
-    // Verify user via Supabase
+    // Decode JWT — gateway já verificou a assinatura
     const jwt = authHeader.replace('Bearer ', '')
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-    )
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser(jwt)
-    if (authError || !user) {
+    const userId = getJWTUserId(jwt)
+    if (!userId) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
+
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+    )
 
     const body: RequestBody = await req.json()
     const { mensagem, imagem_base64, historico } = body

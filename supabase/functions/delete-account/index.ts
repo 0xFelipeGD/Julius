@@ -5,6 +5,16 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+function getJWTUserId(jwt: string): string | null {
+  try {
+    const payload = jwt.split('.')[1]
+    const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')))
+    return decoded.sub ?? null
+  } catch {
+    return null
+  }
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -19,15 +29,10 @@ Deno.serve(async (req: Request) => {
       })
     }
 
-    // Get the user from their JWT
+    // Decode JWT — gateway já verificou a assinatura
     const jwt = authHeader.replace('Bearer ', '')
-    const anonClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-    )
-
-    const { data: { user }, error: authError } = await anonClient.auth.getUser(jwt)
-    if (authError || !user) {
+    const userId = getJWTUserId(jwt)
+    if (!userId) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -40,7 +45,7 @@ Deno.serve(async (req: Request) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     )
 
-    const { error: deleteError } = await adminClient.auth.admin.deleteUser(user.id)
+    const { error: deleteError } = await adminClient.auth.admin.deleteUser(userId)
 
     if (deleteError) {
       throw deleteError
