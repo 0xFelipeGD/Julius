@@ -19,7 +19,7 @@ interface ExtractFiltersProps {
 
 export function ExtractFilters({ periodo, tag, onPeriodoChange, onTagChange }: ExtractFiltersProps) {
   return (
-    <div className="flex gap-3 px-4 py-3">
+    <div className="flex flex-1 gap-3 px-4 py-3">
       <div className="relative flex-1">
         <select
           value={periodo}
