@@ -70,6 +70,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     loadUser()
   }, [setUser])
 
+  async function handleLogout() {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    window.location.href = '/login'
+  }
+
   async function handleDeleteAccount() {
     const confirmed = window.confirm(
       'Excluir a conta permanentemente? Não há volta atrás. O Julius vai chorar.'
@@ -129,6 +135,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {getTabLabel(pathname)}
           </h1>
           <div className="flex items-center gap-2">
+            <button
+              onClick={handleLogout}
+              title="Sair"
+              className="flex h-8 w-8 items-center justify-center rounded-full text-julius-muted transition-colors hover:text-julius-text"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-4 w-4">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 9V5.25A2.25 2.25 0 0 1 10.5 3h6a2.25 2.25 0 0 1 2.25 2.25v13.5A2.25 2.25 0 0 1 16.5 21h-6a2.25 2.25 0 0 1-2.25-2.25V15m-3 0-3-3m0 0 3-3m-3 3H15" />
+              </svg>
+            </button>
             <button
               onClick={handleDeleteAccount}
               disabled={deletingAccount}
