@@ -58,23 +58,32 @@ export function useJuliusChat() {
         tipo: userMessage.tipo,
       })
 
-      // Call Edge Function with explicit auth header
-      const { data, error } = await supabase.functions.invoke('julius-chat', {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-        body: {
+      // Call Edge Function via fetch directo para garantir JWT no Authorization header
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      const res = await fetch(`${supabaseUrl}/functions/v1/julius-chat`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'apikey': supabaseAnonKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           mensagem: content,
           imagem_base64: imageBase64,
           historico: messages.slice(-10).map((m) => ({
             role: m.role,
             content: m.content,
           })),
-        },
+        }),
       })
 
-      if (error || !data) {
-        console.error('[Julius] Edge Function error:', error)
-        throw new Error(error?.message ?? 'Edge Function julius-chat não encontrada ou sem resposta.')
+      if (!res.ok) {
+        console.error('[Julius] Edge Function error:', res.status)
+        throw new Error(`Edge Function retornou ${res.status}`)
       }
+
+      const data = await res.json()
 
       const response = data as JuliusChatResponse
 

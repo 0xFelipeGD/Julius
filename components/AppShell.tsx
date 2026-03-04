@@ -79,8 +79,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     setDeletingAccount(true)
     try {
       const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) throw new Error('Sessão expirada.')
       const { error } = await supabase.functions.invoke('delete-account', {
-        method: 'POST',
+        headers: { Authorization: `Bearer ${session.access_token}` },
       })
       if (error) throw error
 
