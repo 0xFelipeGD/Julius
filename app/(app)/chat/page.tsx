@@ -43,8 +43,8 @@ export default function ChatPage() {
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4">
         {messages.length === 0 && !isLoading && (
           <div className="flex h-full flex-col items-center justify-center text-center">
-            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-julius-accent">
-              <span className="text-2xl font-bold text-white">J</span>
+            <div className="mb-4 h-16 w-16 overflow-hidden rounded-full">
+              <img src="/julius.png" alt="Julius" className="h-full w-full object-cover" />
             </div>
             <p className="text-julius-text font-medium">Olá! Sou o Julius.</p>
             <p className="mt-1 text-sm text-julius-muted">
@@ -64,8 +64,8 @@ export default function ChatPage() {
 
         {isLoading && (
           <div className="flex justify-start mb-3">
-            <div className="mr-2 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-julius-accent">
-              <span className="text-xs font-bold text-white">J</span>
+            <div className="mr-2 h-8 w-8 shrink-0 overflow-hidden rounded-full">
+              <img src="/julius.png" alt="Julius" className="h-full w-full object-cover" />
             </div>
             <div className="rounded-2xl rounded-bl-md bg-julius-card px-4 py-3">
               <div className="flex gap-1">

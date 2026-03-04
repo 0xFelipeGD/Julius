@@ -18,8 +18,8 @@ export function ChatBubble({ message, onConfirm, onCorrect }: ChatBubbleProps) {
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-3`}>
       {!isUser && (
-        <div className="mr-2 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-julius-accent">
-          <span className="text-xs font-bold text-white">J</span>
+        <div className="mr-2 flex h-8 w-8 shrink-0 overflow-hidden rounded-full">
+          <img src="/julius.png" alt="Julius" className="h-full w-full object-cover" />
         </div>
       )}
       <div className={`max-w-[80%]`}>

@@ -1,16 +1,13 @@
 'use client'
 
-import { PeriodFilter } from '@/components/dashboard/PeriodFilter'
+import { CATEGORIES } from '@/lib/categories'
 import type { Periodo, Tag } from '@/lib/types'
 
-const ALL_TAGS: { value: Tag | 'all'; label: string }[] = [
-  { value: 'all', label: 'Tudo' },
-  { value: 'Alimentacao', label: 'Alimentação' },
-  { value: 'Transporte', label: 'Transporte' },
-  { value: 'Saude', label: 'Saúde' },
-  { value: 'Lazer', label: 'Lazer' },
-  { value: 'Habitacao', label: 'Habitação' },
-  { value: 'Outros', label: 'Outros' },
+const PERIODS: { value: Periodo; label: string }[] = [
+  { value: 'semana', label: 'Esta semana' },
+  { value: 'quinzena', label: '15 dias' },
+  { value: 'mes', label: 'Este mês' },
+  { value: 'total', label: 'Total' },
 ]
 
 interface ExtractFiltersProps {
@@ -22,22 +19,44 @@ interface ExtractFiltersProps {
 
 export function ExtractFilters({ periodo, tag, onPeriodoChange, onTagChange }: ExtractFiltersProps) {
   return (
-    <div>
-      <PeriodFilter selected={periodo} onChange={onPeriodoChange} />
-      <div className="flex gap-2 overflow-x-auto px-4 pb-3 scrollbar-none">
-        {ALL_TAGS.map((t) => (
-          <button
-            key={t.value}
-            onClick={() => onTagChange(t.value)}
-            className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-              tag === t.value
-                ? 'bg-julius-accent text-white'
-                : 'bg-julius-card text-julius-muted'
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
+    <div className="flex gap-3 px-4 py-3">
+      <div className="relative flex-1">
+        <select
+          value={periodo}
+          onChange={(e) => onPeriodoChange(e.target.value as Periodo)}
+          className="w-full appearance-none bg-julius-card text-julius-text border border-julius-border rounded-xl px-3 py-2.5 text-sm font-medium focus:outline-none focus:border-julius-accent cursor-pointer"
+        >
+          {PERIODS.map((p) => (
+            <option key={p.value} value={p.value}>
+              {p.label}
+            </option>
+          ))}
+        </select>
+        <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+          <svg className="h-4 w-4 text-julius-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
+      </div>
+
+      <div className="relative flex-1">
+        <select
+          value={tag}
+          onChange={(e) => onTagChange(e.target.value as Tag | 'all')}
+          className="w-full appearance-none bg-julius-card text-julius-text border border-julius-border rounded-xl px-3 py-2.5 text-sm font-medium focus:outline-none focus:border-julius-accent cursor-pointer"
+        >
+          <option value="all">Tudo</option>
+          {CATEGORIES.map((c) => (
+            <option key={c.value} value={c.value}>
+              {c.label}
+            </option>
+          ))}
+        </select>
+        <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+          <svg className="h-4 w-4 text-julius-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
       </div>
     </div>
   )

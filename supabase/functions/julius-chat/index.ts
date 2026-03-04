@@ -93,14 +93,19 @@ Deno.serve(async (req: Request) => {
     const body: RequestBody = await req.json()
     const { mensagem, imagem_base64, historico } = body
 
+    const today = new Date()
+    const todayStr = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`
+    const nowHour = `${String(today.getHours()).padStart(2, '0')}:${String(today.getMinutes()).padStart(2, '0')}`
+
     const openaiKey = Deno.env.get('OPENAI_API_KEY')
     if (!openaiKey) {
       throw new Error('OPENAI_API_KEY not configured')
     }
 
     // Build messages for OpenAI
+    const systemWithDate = `${JULIUS_SYSTEM_PROMPT}\n\nDATA E HORA ACTUAL: ${todayStr} às ${nowHour}`
     const messages: Array<{ role: string; content: string | Array<{ type: string; text?: string; image_url?: { url: string } }> }> = [
-      { role: 'system', content: JULIUS_SYSTEM_PROMPT },
+      { role: 'system', content: systemWithDate },
     ]
 
     // Add history (last 10 messages)

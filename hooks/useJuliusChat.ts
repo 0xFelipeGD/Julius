@@ -1,15 +1,15 @@
 'use client'
 
 import { useState, useCallback } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import type { ChatMessage, JuliusChatResponse, TransacaoPendente } from '@/lib/types'
-import { useAuthStore } from '@/stores/authStore'
 
 export function useJuliusChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [isLoading, setIsLoading] = useState(false)
-  const userId = useAuthStore((s) => s.userId)
   const supabase = createClient()
+  const queryClient = useQueryClient()
 
   const loadHistory = useCallback(async () => {
     const { data } = await supabase
@@ -44,16 +44,23 @@ export function useJuliusChat() {
     setIsLoading(true)
 
     try {
+      // Get fresh session token
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) throw new Error('Sessão expirada. Faz login novamente.')
+
+      const currentUserId = session.user.id
+
       // Save user message to history
       await supabase.from('chat_history').insert({
-        user_id: userId,
+        user_id: currentUserId,
         role: 'user',
         content: userMessage.content,
         tipo: userMessage.tipo,
       })
 
-      // Call Edge Function
+      // Call Edge Function with explicit auth header
       const { data, error } = await supabase.functions.invoke('julius-chat', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
         body: {
           mensagem: content,
           imagem_base64: imageBase64,
@@ -84,7 +91,7 @@ export function useJuliusChat() {
 
       // Save julius message to history
       await supabase.from('chat_history').insert({
-        user_id: userId,
+        user_id: currentUserId,
         role: 'julius',
         content: data.mensagem_julius,
         tipo: juliusMessage.tipo,
@@ -102,20 +109,31 @@ export function useJuliusChat() {
     } finally {
       setIsLoading(false)
     }
-  }, [messages, supabase, userId])
+  }, [messages, supabase])
 
   const confirmTransaction = useCallback(async (transacao: TransacaoPendente) => {
     try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) throw new Error('Sessão expirada.')
+
+      // Convert dia from DD/MM/YYYY to YYYY-MM-DD for Supabase
+      const [day, month, year] = transacao.dia.split('/')
+      const diaISO = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
+
       const { error } = await supabase.from('transacoes').insert({
-        user_id: userId,
+        user_id: session.user.id,
         valor: transacao.valor,
         tag: transacao.tag,
         descricao: transacao.descricao,
-        dia: transacao.dia,
+        dia: diaISO,
         hora: transacao.hora,
       })
 
       if (error) throw error
+
+      // Atualiza dashboard e extrato sem precisar recarregar
+      queryClient.invalidateQueries({ queryKey: ['transactions'] })
+      queryClient.invalidateQueries({ queryKey: ['stats'] })
 
       const confirmMsg: ChatMessage = {
         id: crypto.randomUUID(),
@@ -134,7 +152,8 @@ export function useJuliusChat() {
         )
         return [...updated, confirmMsg]
       })
-    } catch {
+    } catch (err) {
+      console.error('[Julius] confirmTransaction error:', err)
       const errMsg: ChatMessage = {
         id: crypto.randomUUID(),
         role: 'julius',
@@ -144,7 +163,7 @@ export function useJuliusChat() {
       }
       setMessages((prev) => [...prev, errMsg])
     }
-  }, [supabase, userId])
+  }, [supabase])
 
   return { messages, isLoading, sendMessage, confirmTransaction, loadHistory }
 }

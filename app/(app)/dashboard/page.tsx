@@ -5,13 +5,8 @@ import { PeriodFilter } from '@/components/dashboard/PeriodFilter'
 import { StatsCards } from '@/components/dashboard/StatsCards'
 import { SpendingChart } from '@/components/dashboard/SpendingChart'
 import { useStats } from '@/hooks/useStats'
+import { CATEGORIES } from '@/lib/categories'
 import type { Periodo, Tag } from '@/lib/types'
-
-const CATEGORY_FILTERS: { value: Tag | 'all'; label: string }[] = [
-  { value: 'all', label: 'Tudo' },
-  { value: 'Alimentacao', label: 'Alimentação' },
-  { value: 'Outros', label: 'Outros' },
-]
 
 export default function DashboardPage() {
   const [periodo, setPeriodo] = useState<Periodo>('mes')
@@ -21,22 +16,29 @@ export default function DashboardPage() {
 
   return (
     <div className="pb-4">
-      <PeriodFilter selected={periodo} onChange={setPeriodo} />
-
-      <div className="flex gap-2 overflow-x-auto px-4 pb-4 scrollbar-none">
-        {CATEGORY_FILTERS.map((f) => (
-          <button
-            key={f.value}
-            onClick={() => setTag(f.value)}
-            className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-              tag === f.value
-                ? 'bg-julius-accent text-white'
-                : 'bg-julius-card text-julius-muted'
-            }`}
+      <div className="flex gap-3 px-4 py-3">
+        <div className="flex-1">
+          <PeriodFilter selected={periodo} onChange={setPeriodo} />
+        </div>
+        <div className="relative flex-1">
+          <select
+            value={tag}
+            onChange={(e) => setTag(e.target.value as Tag | 'all')}
+            className="w-full appearance-none bg-julius-card text-julius-text border border-julius-border rounded-xl px-3 py-2.5 text-sm font-medium focus:outline-none focus:border-julius-accent cursor-pointer"
           >
-            {f.label}
-          </button>
-        ))}
+            <option value="all">Tudo</option>
+            {CATEGORIES.map((c) => (
+              <option key={c.value} value={c.value}>
+                {c.label}
+              </option>
+            ))}
+          </select>
+          <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+            <svg className="h-4 w-4 text-julius-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+        </div>
       </div>
 
       <StatsCards

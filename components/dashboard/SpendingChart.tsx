@@ -3,6 +3,7 @@
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { formatDayMonth } from '@/lib/utils/date'
 import { formatCurrency } from '@/lib/utils/currency'
+import { CATEGORIES, CATEGORY_COLORS, CATEGORY_LABELS } from '@/lib/categories'
 import type { DayStats } from '@/lib/types'
 
 interface SpendingChartProps {
@@ -34,24 +35,6 @@ function CustomTooltip({ active, payload, label }: TooltipProps) {
         ))}
     </div>
   )
-}
-
-const CATEGORY_COLORS: Record<string, string> = {
-  Alimentacao: '#16A34A',
-  Transporte: '#2563EB',
-  Saude: '#DC2626',
-  Lazer: '#9333EA',
-  Habitacao: '#CA8A04',
-  Outros: '#64748B',
-}
-
-const CATEGORY_LABELS: Record<string, string> = {
-  Alimentacao: 'Alimentação',
-  Transporte: 'Transporte',
-  Saude: 'Saúde',
-  Lazer: 'Lazer',
-  Habitacao: 'Habitação',
-  Outros: 'Outros',
 }
 
 export function SpendingChart({ data, isLoading }: SpendingChartProps) {
@@ -94,14 +77,14 @@ export function SpendingChart({ data, isLoading }: SpendingChartProps) {
             tickFormatter={(v) => `${v}€`}
           />
           <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
-          {Object.entries(CATEGORY_COLORS).map(([key, color]) => (
+          {CATEGORIES.map((cat, idx) => (
             <Bar
-              key={key}
-              dataKey={key}
+              key={cat.value}
+              dataKey={cat.value}
               stackId="a"
-              fill={color}
-              radius={key === 'Outros' ? [4, 4, 0, 0] : [0, 0, 0, 0]}
-              name={CATEGORY_LABELS[key]}
+              fill={cat.color}
+              radius={idx === CATEGORIES.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]}
+              name={cat.label}
             />
           ))}
         </BarChart>

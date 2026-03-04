@@ -121,7 +121,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="flex min-h-dvh flex-col">
+      <div className="flex h-dvh flex-col">
         <header className="safe-top flex items-center justify-between border-b border-julius-border bg-julius-bg px-4 pb-3 pt-3">
           <h1 className="text-lg font-semibold text-julius-text">
             {getTabLabel(pathname)}
@@ -161,8 +161,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </svg>
               )}
             </button>
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-julius-accent">
-              <span className="text-sm font-bold text-white">J</span>
+            <div className="flex h-8 w-8 shrink-0 overflow-hidden rounded-full">
+              <img src="/julius.png" alt="Julius" className="h-full w-full object-cover" />
             </div>
           </div>
         </header>

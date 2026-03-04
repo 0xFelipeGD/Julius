@@ -2,6 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
+import { ALL_TAGS } from '@/lib/categories'
 import type { Periodo, Tag, DayStats } from '@/lib/types'
 
 function getPeriodRange(periodo: Periodo): { from: string; to: string } {
@@ -29,8 +30,6 @@ function getPeriodRange(periodo: Periodo): { from: string; to: string } {
 
   return { from: from.toISOString().split('T')[0], to }
 }
-
-const ALL_TAGS: Tag[] = ['Alimentacao', 'Transporte', 'Saude', 'Lazer', 'Habitacao', 'Outros']
 
 export function useStats(periodo: Periodo, tag?: Tag) {
   const supabase = createClient()
