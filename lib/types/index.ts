@@ -2,6 +2,12 @@ export type Tag = 'Alimentacao' | 'Transporte' | 'Saude' | 'Lazer' | 'Habitacao'
 export type Periodo = 'semana' | 'quinzena' | 'mes' | 'total'
 export type ChatRole = 'user' | 'julius'
 export type MessageTipo = 'texto' | 'imagem' | 'confirmacao'
+export type Currency = 'EUR' | 'BRL'
+
+export interface UserSettings {
+  currency: Currency
+  enabled_categories: Tag[]
+}
 
 export interface Transacao {
   id: string

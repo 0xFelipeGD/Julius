@@ -59,6 +59,7 @@ interface RequestBody {
   mensagem: string
   imagem_base64?: string
   historico: HistoricoItem[]
+  tags_disponiveis?: string[]
 }
 
 function getJWTUserId(jwt: string): string | null {
@@ -101,7 +102,7 @@ Deno.serve(async (req: Request) => {
     )
 
     const body: RequestBody = await req.json()
-    const { mensagem, imagem_base64, historico } = body
+    const { mensagem, imagem_base64, historico, tags_disponiveis } = body
 
     const today = new Date()
     const todayStr = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`
@@ -112,8 +113,17 @@ Deno.serve(async (req: Request) => {
       throw new Error('OPENAI_API_KEY not configured')
     }
 
+    // Override available tags if user has custom selection
+    const tagsStr = tags_disponiveis && tags_disponiveis.length > 0
+      ? tags_disponiveis.join(', ')
+      : 'Alimentacao, Transporte, Saude, Lazer, Habitacao, Outros'
+    const promptWithTags = JULIUS_SYSTEM_PROMPT.replace(
+      'TAGS DISPONÍVEIS (usa exactamente): Alimentacao, Transporte, Saude, Lazer, Habitacao, Outros',
+      `TAGS DISPONÍVEIS (usa exactamente): ${tagsStr}`
+    )
+
     // Build messages for OpenAI
-    const systemWithDate = `${JULIUS_SYSTEM_PROMPT}\n\nDATA E HORA ACTUAL: ${todayStr} às ${nowHour}`
+    const systemWithDate = `${promptWithTags}\n\nDATA E HORA ACTUAL: ${todayStr} às ${nowHour}`
     const messages: Array<{ role: string; content: string | Array<{ type: string; text?: string; image_url?: { url: string } }> }> = [
       { role: 'system', content: systemWithDate },
     ]

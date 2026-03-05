@@ -22,8 +22,12 @@ export default function ChatPage() {
     }
   }, [messages])
 
-  function handleConfirm(t: TransacaoPendente) {
-    confirmTransaction(t)
+  async function handleConfirm(t: TransacaoPendente) {
+    try {
+      await confirmTransaction(t)
+    } catch (err) {
+      console.error('[Julius] confirmTransaction error:', err)
+    }
   }
 
   function handleCorrect(t: TransacaoPendente, correction: string) {

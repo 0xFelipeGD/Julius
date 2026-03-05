@@ -6,11 +6,14 @@ import { StatsCards } from '@/components/dashboard/StatsCards'
 import { SpendingChart } from '@/components/dashboard/SpendingChart'
 import { useStats } from '@/hooks/useStats'
 import { CATEGORIES } from '@/lib/categories'
+import { useUserSettingsStore } from '@/stores/userSettingsStore'
 import type { Periodo, Tag } from '@/lib/types'
 
 export default function DashboardPage() {
   const [periodo, setPeriodo] = useState<Periodo>('mes')
   const [tag, setTag] = useState<Tag | 'all'>('all')
+  const enabledCategories = useUserSettingsStore((s) => s.enabledCategories)
+  const visibleCategories = CATEGORIES.filter((c) => enabledCategories.includes(c.value))
 
   const { data, isLoading } = useStats(periodo, tag === 'all' ? undefined : tag)
 
@@ -27,7 +30,7 @@ export default function DashboardPage() {
             className="w-full appearance-none bg-julius-card text-julius-text border border-julius-border rounded-xl px-3 py-2.5 text-sm font-medium focus:outline-none focus:border-julius-accent cursor-pointer"
           >
             <option value="all">Tudo</option>
-            {CATEGORIES.map((c) => (
+            {visibleCategories.map((c) => (
               <option key={c.value} value={c.value}>
                 {c.label}
               </option>

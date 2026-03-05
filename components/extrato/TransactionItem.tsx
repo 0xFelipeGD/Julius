@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { formatCurrency } from '@/lib/utils/currency'
 import { formatTime } from '@/lib/utils/date'
+import { useUserSettingsStore } from '@/stores/userSettingsStore'
 import type { Transacao, Tag } from '@/lib/types'
 
 const TAG_CONFIG: Record<Tag, { label: string; color: string; bg: string; icon: string }> = {
@@ -22,6 +23,7 @@ interface TransactionItemProps {
 export function TransactionItem({ transaction, onDelete }: TransactionItemProps) {
   const [showDelete, setShowDelete] = useState(false)
   const [startX, setStartX] = useState(0)
+  const currency = useUserSettingsStore((s) => s.currency)
   const tag = TAG_CONFIG[transaction.tag]
 
   function handleTouchStart(e: React.TouchEvent) {
@@ -60,7 +62,7 @@ export function TransactionItem({ transaction, onDelete }: TransactionItemProps)
           <p className="text-xs text-julius-muted">{tag.label} · {formatTime(transaction.hora)}</p>
         </div>
         <p className="text-sm font-semibold text-julius-text shrink-0">
-          {formatCurrency(transaction.valor)}
+          {formatCurrency(transaction.valor, currency)}
         </p>
       </div>
 

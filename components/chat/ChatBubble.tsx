@@ -4,7 +4,7 @@ import type { TransacaoPendente } from '@/lib/types'
 
 interface ChatBubbleProps {
   message: ChatMessage
-  onConfirm?: (t: TransacaoPendente) => void
+  onConfirm?: (t: TransacaoPendente) => Promise<void> | void
   onCorrect?: (t: TransacaoPendente, correction: string) => void
 }
 

@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
+import { useUserSettingsStore } from '@/stores/userSettingsStore'
 import type { ChatMessage, JuliusChatResponse, TransacaoPendente } from '@/lib/types'
 
 export function useJuliusChat() {
@@ -10,6 +11,7 @@ export function useJuliusChat() {
   const [isLoading, setIsLoading] = useState(false)
   const supabase = createClient()
   const queryClient = useQueryClient()
+  const enabledCategories = useUserSettingsStore((s) => s.enabledCategories)
 
   const loadHistory = useCallback(async () => {
     const { data } = await supabase
@@ -44,13 +46,11 @@ export function useJuliusChat() {
     setIsLoading(true)
 
     try {
-      // Get fresh session token
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) throw new Error('Sessão expirada. Faz login novamente.')
 
       const currentUserId = session.user.id
 
-      // Save user message to history
       await supabase.from('chat_history').insert({
         user_id: currentUserId,
         role: 'user',
@@ -58,7 +58,6 @@ export function useJuliusChat() {
         tipo: userMessage.tipo,
       })
 
-      // Call Edge Function via fetch directo para garantir JWT no Authorization header
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
       const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
       const res = await fetch(`${supabaseUrl}/functions/v1/julius-chat`, {
@@ -71,6 +70,7 @@ export function useJuliusChat() {
         body: JSON.stringify({
           mensagem: content,
           imagem_base64: imageBase64,
+          tags_disponiveis: enabledCategories,
           historico: messages.slice(-10).map((m) => ({
             role: m.role,
             content: m.content,
@@ -98,7 +98,6 @@ export function useJuliusChat() {
 
       setMessages((prev) => [...prev, juliusMessage])
 
-      // Save julius message to history
       await supabase.from('chat_history').insert({
         user_id: currentUserId,
         role: 'julius',
@@ -118,61 +117,46 @@ export function useJuliusChat() {
     } finally {
       setIsLoading(false)
     }
-  }, [messages, supabase])
+  }, [messages, supabase, enabledCategories])
 
-  const confirmTransaction = useCallback(async (transacao: TransacaoPendente) => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) throw new Error('Sessão expirada.')
+  const confirmTransaction = useCallback(async (transacao: TransacaoPendente): Promise<void> => {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) throw new Error('Sessão expirada.')
 
-      // Convert dia from DD/MM/YYYY to YYYY-MM-DD for Supabase
-      const [day, month, year] = transacao.dia.split('/')
-      const diaISO = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
+    const [day, month, year] = transacao.dia.split('/')
+    const diaISO = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
 
-      const { error } = await supabase.from('transacoes').insert({
-        user_id: session.user.id,
-        valor: transacao.valor,
-        tag: transacao.tag,
-        descricao: transacao.descricao,
-        dia: diaISO,
-        hora: transacao.hora,
-      })
+    const { error } = await supabase.from('transacoes').insert({
+      user_id: session.user.id,
+      valor: transacao.valor,
+      tag: transacao.tag,
+      descricao: transacao.descricao,
+      dia: diaISO,
+      hora: transacao.hora,
+    })
 
-      if (error) throw error
+    if (error) throw error
 
-      // Atualiza dashboard e extrato sem precisar recarregar
-      queryClient.invalidateQueries({ queryKey: ['transactions'] })
-      queryClient.invalidateQueries({ queryKey: ['stats'] })
+    queryClient.invalidateQueries({ queryKey: ['transactions'] })
+    queryClient.invalidateQueries({ queryKey: ['stats'] })
 
-      const confirmMsg: ChatMessage = {
-        id: crypto.randomUUID(),
-        role: 'julius',
-        content: `Registado! ${transacao.descricao} por ${transacao.valor.toFixed(2)}€. Cada cêntimo conta... literalmente.`,
-        tipo: 'texto',
-        created_at: new Date().toISOString(),
-      }
-
-      setMessages((prev) => {
-        // Remove the pending transaction from the message that had it
-        const updated = prev.map((m) =>
-          m.transacao_pendente === transacao
-            ? { ...m, transacao_pendente: undefined }
-            : m
-        )
-        return [...updated, confirmMsg]
-      })
-    } catch (err) {
-      console.error('[Julius] confirmTransaction error:', err)
-      const errMsg: ChatMessage = {
-        id: crypto.randomUUID(),
-        role: 'julius',
-        content: 'Não consegui gravar. O dinheiro escapou-me das mãos digitais...',
-        tipo: 'texto',
-        created_at: new Date().toISOString(),
-      }
-      setMessages((prev) => [...prev, errMsg])
+    const confirmMsg: ChatMessage = {
+      id: crypto.randomUUID(),
+      role: 'julius',
+      content: `Registado! ${transacao.descricao} por ${transacao.valor.toFixed(2)}. Cada cêntimo conta... literalmente.`,
+      tipo: 'texto',
+      created_at: new Date().toISOString(),
     }
-  }, [supabase])
+
+    setMessages((prev) => {
+      const updated = prev.map((m) =>
+        m.transacao_pendente === transacao
+          ? { ...m, transacao_pendente: undefined }
+          : m
+      )
+      return [...updated, confirmMsg]
+    })
+  }, [supabase, queryClient])
 
   return { messages, isLoading, sendMessage, confirmTransaction, loadHistory }
 }

@@ -1,6 +1,7 @@
 'use client'
 
 import { CATEGORIES } from '@/lib/categories'
+import { useUserSettingsStore } from '@/stores/userSettingsStore'
 import type { Periodo, Tag } from '@/lib/types'
 
 const PERIODS: { value: Periodo; label: string }[] = [
@@ -18,6 +19,9 @@ interface ExtractFiltersProps {
 }
 
 export function ExtractFilters({ periodo, tag, onPeriodoChange, onTagChange }: ExtractFiltersProps) {
+  const enabledCategories = useUserSettingsStore((s) => s.enabledCategories)
+  const visibleCategories = CATEGORIES.filter((c) => enabledCategories.includes(c.value))
+
   return (
     <div className="flex flex-1 gap-3 px-4 py-3">
       <div className="relative flex-1">
@@ -46,7 +50,7 @@ export function ExtractFilters({ periodo, tag, onPeriodoChange, onTagChange }: E
           className="w-full appearance-none bg-julius-card text-julius-text border border-julius-border rounded-xl px-3 py-2.5 text-sm font-medium focus:outline-none focus:border-julius-accent cursor-pointer"
         >
           <option value="all">Tudo</option>
-          {CATEGORIES.map((c) => (
+          {visibleCategories.map((c) => (
             <option key={c.value} value={c.value}>
               {c.label}
             </option>

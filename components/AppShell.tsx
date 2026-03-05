@@ -5,6 +5,8 @@ import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuthStore } from '@/stores/authStore'
+import { useUserSettings } from '@/hooks/useUserSettings'
+import { JuliusLightbox } from '@/components/JuliusLightbox'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 const tabs = [
@@ -35,20 +37,89 @@ const tabs = [
       </svg>
     ),
   },
+  {
+    href: '/settings',
+    label: 'Config',
+    icon: (active: boolean) => (
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={`h-6 w-6 ${active ? 'text-julius-accent' : 'text-julius-muted'}`}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+      </svg>
+    ),
+  },
 ]
 
 function getTabLabel(pathname: string): string {
   if (pathname.startsWith('/chat')) return 'Chat'
   if (pathname.startsWith('/dashboard')) return 'Dashboard'
   if (pathname.startsWith('/extrato')) return 'Extrato'
+  if (pathname.startsWith('/settings')) return 'Configurações'
   return 'Julius'
 }
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+function AppShellInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const setUser = useAuthStore((s) => s.setUser)
-  const [resetting, setResetting] = useState(false)
-  const [deletingAccount, setDeletingAccount] = useState(false)
+  const [lightboxOpen, setLightboxOpen] = useState(false)
+  const { loadSettings } = useUserSettings()
+
+  useEffect(() => {
+    async function init() {
+      const supabase = createClient()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (user) {
+        setUser(user.id, user.email ?? '')
+        await loadSettings()
+      }
+    }
+    init()
+  }, [setUser, loadSettings])
+
+  return (
+    <div className="flex h-dvh flex-col">
+      <header className="safe-top flex items-center justify-between border-b border-julius-border bg-julius-bg px-4 pb-3 pt-3">
+        <h1 className="text-lg font-semibold text-julius-text">
+          {getTabLabel(pathname)}
+        </h1>
+        <button
+          onClick={() => setLightboxOpen(true)}
+          className="flex h-9 w-9 shrink-0 overflow-hidden rounded-full ring-2 ring-julius-border hover:ring-julius-accent transition-all active:scale-95"
+          aria-label="Ver Julius"
+        >
+          <img src="/julius.png" alt="Julius" className="h-full w-full object-cover" />
+        </button>
+      </header>
+
+      <main className="flex-1 overflow-y-auto">
+        {children}
+      </main>
+
+      <nav className="safe-bottom flex items-center justify-around border-t border-julius-border bg-julius-bg px-2 pb-2 pt-2">
+        {tabs.map((tab) => {
+          const isActive = pathname.startsWith(tab.href)
+          return (
+            <Link
+              key={tab.href}
+              href={tab.href}
+              className="flex flex-col items-center gap-0.5 px-3 py-1"
+            >
+              {tab.icon(isActive)}
+              <span className={`text-xs ${isActive ? 'text-julius-accent font-medium' : 'text-julius-muted'}`}>
+                {tab.label}
+              </span>
+            </Link>
+          )
+        })}
+      </nav>
+
+      <JuliusLightbox open={lightboxOpen} onClose={() => setLightboxOpen(false)} />
+    </div>
+  )
+}
+
+export function AppShell({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
     () =>
       new QueryClient({
@@ -61,151 +132,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       })
   )
 
-  useEffect(() => {
-    async function loadUser() {
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) setUser(user.id, user.email ?? '')
-    }
-    loadUser()
-  }, [setUser])
-
-  async function handleLogout() {
-    const supabase = createClient()
-    await supabase.auth.signOut()
-    window.location.href = '/login'
-  }
-
-  async function handleDeleteAccount() {
-    const confirmed = window.confirm(
-      'Excluir a conta permanentemente? Não há volta atrás. O Julius vai chorar.'
-    )
-    if (!confirmed) return
-
-    setDeletingAccount(true)
-    try {
-      const supabase = createClient()
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) throw new Error('Sessão expirada.')
-      const { error } = await supabase.functions.invoke('delete-account', {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      })
-      if (error) throw error
-
-      await supabase.auth.signOut()
-      window.location.href = '/login'
-    } catch (err) {
-      console.error('delete-account error:', err)
-      alert('Erro ao excluir conta. Tenta de novo.')
-    } finally {
-      setDeletingAccount(false)
-    }
-  }
-
-  async function handleReset() {
-    const confirmed = window.confirm(
-      'Apagar TUDO? Transacções, histórico de chat, tudo. O Julius vai ficar em choque.'
-    )
-    if (!confirmed) return
-
-    setResetting(true)
-    try {
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
-      await Promise.all([
-        supabase.from('transacoes').delete().eq('user_id', user.id),
-        supabase.from('chat_history').delete().eq('user_id', user.id),
-      ])
-
-      // Invalidate all queries so UI refreshes
-      queryClient.clear()
-      window.location.href = '/chat'
-    } finally {
-      setResetting(false)
-    }
-  }
-
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="flex h-dvh flex-col">
-        <header className="safe-top flex items-center justify-between border-b border-julius-border bg-julius-bg px-4 pb-3 pt-3">
-          <h1 className="text-lg font-semibold text-julius-text">
-            {getTabLabel(pathname)}
-          </h1>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleLogout}
-              title="Sair"
-              className="flex h-8 w-8 items-center justify-center rounded-full text-julius-muted transition-colors hover:text-julius-text"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-4 w-4">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 9V5.25A2.25 2.25 0 0 1 10.5 3h6a2.25 2.25 0 0 1 2.25 2.25v13.5A2.25 2.25 0 0 1 16.5 21h-6a2.25 2.25 0 0 1-2.25-2.25V15m-3 0-3-3m0 0 3-3m-3 3H15" />
-              </svg>
-            </button>
-            <button
-              onClick={handleDeleteAccount}
-              disabled={deletingAccount}
-              title="Excluir conta"
-              className="flex h-8 w-8 items-center justify-center rounded-full text-julius-muted transition-colors hover:text-julius-danger disabled:opacity-50"
-            >
-              {deletingAccount ? (
-                <svg className="h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
-              ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-4 w-4">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" />
-                </svg>
-              )}
-            </button>
-            <button
-              onClick={handleReset}
-              disabled={resetting}
-              title="Limpar todos os dados"
-              className="flex h-8 w-8 items-center justify-center rounded-full text-julius-muted transition-colors hover:text-julius-danger disabled:opacity-50"
-            >
-              {resetting ? (
-                <svg className="h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
-              ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-4 w-4">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
-                </svg>
-              )}
-            </button>
-            <div className="flex h-8 w-8 shrink-0 overflow-hidden rounded-full">
-              <img src="/julius.png" alt="Julius" className="h-full w-full object-cover" />
-            </div>
-          </div>
-        </header>
-
-        <main className="flex-1 overflow-y-auto">
-          {children}
-        </main>
-
-        <nav className="safe-bottom flex items-center justify-around border-t border-julius-border bg-julius-bg px-2 pb-2 pt-2">
-          {tabs.map((tab) => {
-            const isActive = pathname.startsWith(tab.href)
-            return (
-              <Link
-                key={tab.href}
-                href={tab.href}
-                className="flex flex-col items-center gap-0.5 px-4 py-1"
-              >
-                {tab.icon(isActive)}
-                <span className={`text-xs ${isActive ? 'text-julius-accent font-medium' : 'text-julius-muted'}`}>
-                  {tab.label}
-                </span>
-              </Link>
-            )
-          })}
-        </nav>
-      </div>
+      <AppShellInner>{children}</AppShellInner>
     </QueryClientProvider>
   )
 }
