@@ -4,10 +4,10 @@ import { useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useUserSettingsStore } from '@/stores/userSettingsStore'
 import { ALL_TAGS } from '@/lib/categories'
-import type { Currency, Tag } from '@/lib/types'
+import type { Currency, Tag, Limites } from '@/lib/types'
 
 export function useUserSettings() {
-  const { currency, enabledCategories, setCurrency, setEnabledCategories, setLoaded } =
+  const { currency, enabledCategories, limites, setCurrency, setEnabledCategories, setLimites, setLoaded } =
     useUserSettingsStore()
   const supabase = createClient()
 
@@ -19,16 +19,17 @@ export function useUserSettings() {
 
     const { data } = await supabase
       .from('user_settings')
-      .select('currency, enabled_categories')
+      .select('currency, enabled_categories, limites')
       .eq('user_id', user.id)
       .single()
 
     if (data) {
       setCurrency((data.currency as Currency) ?? 'EUR')
       setEnabledCategories((data.enabled_categories as Tag[]) ?? ALL_TAGS)
+      setLimites((data.limites as Limites) ?? {})
     }
     setLoaded(true)
-  }, [supabase, setCurrency, setEnabledCategories, setLoaded])
+  }, [supabase, setCurrency, setEnabledCategories, setLimites, setLoaded])
 
   const saveCurrency = useCallback(
     async (value: Currency) => {
@@ -44,19 +45,19 @@ export function useUserSettings() {
     [supabase, setCurrency]
   )
 
-  const saveEnabledCategories = useCallback(
-    async (cats: Tag[]) => {
-      setEnabledCategories(cats)
+  const saveLimites = useCallback(
+    async (value: Limites) => {
+      setLimites(value)
       const {
         data: { user },
       } = await supabase.auth.getUser()
       if (!user) return
       await supabase
         .from('user_settings')
-        .upsert({ user_id: user.id, enabled_categories: cats }, { onConflict: 'user_id' })
+        .upsert({ user_id: user.id, limites: value }, { onConflict: 'user_id' })
     },
-    [supabase, setEnabledCategories]
+    [supabase, setLimites]
   )
 
-  return { currency, enabledCategories, loadSettings, saveCurrency, saveEnabledCategories }
+  return { currency, enabledCategories, limites, loadSettings, saveCurrency, saveLimites }
 }

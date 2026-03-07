@@ -3,10 +3,11 @@
 import type { Periodo } from '@/lib/types'
 
 const PERIODS: { value: Periodo; label: string }[] = [
-  { value: 'semana', label: 'Esta semana' },
-  { value: 'quinzena', label: '15 dias' },
-  { value: 'mes', label: 'Este mês' },
-  { value: 'total', label: 'Total' },
+  { value: 'hoje', label: 'Hoje' },
+  { value: 'semana', label: 'Essa semana' },
+  { value: 'mes', label: 'Esse mês' },
+  { value: 'trimestre', label: 'Esse trimestre' },
+  { value: 'total', label: 'Tudo' },
 ]
 
 interface PeriodFilterProps {

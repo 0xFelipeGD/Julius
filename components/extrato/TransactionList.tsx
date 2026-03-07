@@ -9,6 +9,7 @@ interface TransactionListProps {
   transactions: Transacao[]
   isLoading: boolean
   onDelete: (id: string) => void
+  onEdit: (t: Transacao) => void
 }
 
 function groupByDay(transactions: Transacao[]): Map<string, Transacao[]> {
@@ -21,7 +22,7 @@ function groupByDay(transactions: Transacao[]): Map<string, Transacao[]> {
   return groups
 }
 
-export function TransactionList({ transactions, isLoading, onDelete }: TransactionListProps) {
+export function TransactionList({ transactions, isLoading, onDelete, onEdit }: TransactionListProps) {
   if (isLoading) {
     return (
       <div className="space-y-3 px-4 py-4">
@@ -65,7 +66,7 @@ export function TransactionList({ transactions, isLoading, onDelete }: Transacti
               <p className="text-xs font-medium text-julius-muted">{formatCurrency(dayTotal)}</p>
             </div>
             {items.map((t) => (
-              <TransactionItem key={t.id} transaction={t} onDelete={onDelete} />
+              <TransactionItem key={t.id} transaction={t} onDelete={onDelete} onEdit={onEdit} />
             ))}
           </div>
         )

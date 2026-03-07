@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { formatCurrency } from '@/lib/utils/currency'
 import { formatTime } from '@/lib/utils/date'
 import { useUserSettingsStore } from '@/stores/userSettingsStore'
@@ -18,25 +18,40 @@ const TAG_CONFIG: Record<Tag, { label: string; color: string; bg: string; icon: 
 interface TransactionItemProps {
   transaction: Transacao
   onDelete: (id: string) => void
+  onEdit: (t: Transacao) => void
 }
 
-export function TransactionItem({ transaction, onDelete }: TransactionItemProps) {
+export function TransactionItem({ transaction, onDelete, onEdit }: TransactionItemProps) {
   const [showDelete, setShowDelete] = useState(false)
   const [startX, setStartX] = useState(0)
+  const swipedRef = useRef(false)
   const currency = useUserSettingsStore((s) => s.currency)
   const tag = TAG_CONFIG[transaction.tag]
 
   function handleTouchStart(e: React.TouchEvent) {
     setStartX(e.touches[0].clientX)
+    swipedRef.current = false
   }
 
   function handleTouchEnd(e: React.TouchEvent) {
     const diff = startX - e.changedTouches[0].clientX
-    if (diff > 80) {
-      setShowDelete(true)
-    } else if (diff < -40) {
-      setShowDelete(false)
+    if (Math.abs(diff) > 15) {
+      swipedRef.current = true
+      if (diff > 80) setShowDelete(true)
+      else if (diff < -40) setShowDelete(false)
     }
+  }
+
+  function handleClick() {
+    if (swipedRef.current) {
+      swipedRef.current = false
+      return
+    }
+    if (showDelete) {
+      setShowDelete(false)
+      return
+    }
+    onEdit(transaction)
   }
 
   function handleDelete() {
@@ -48,9 +63,10 @@ export function TransactionItem({ transaction, onDelete }: TransactionItemProps)
   return (
     <div className="relative overflow-hidden">
       <div
+        onClick={handleClick}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
-        className={`flex items-center gap-3 px-4 py-3 transition-transform duration-200 ${
+        className={`flex cursor-pointer items-center gap-3 px-4 py-3 transition-transform duration-200 active:bg-julius-card/50 ${
           showDelete ? '-translate-x-20' : 'translate-x-0'
         }`}
       >

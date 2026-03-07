@@ -1,10 +1,13 @@
 'use client'
 
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
+import { useRef, useState, useEffect } from 'react'
+import { BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts'
 import { formatDayMonth } from '@/lib/utils/date'
 import { formatCurrency } from '@/lib/utils/currency'
-import { CATEGORIES, CATEGORY_COLORS, CATEGORY_LABELS } from '@/lib/categories'
+import { CATEGORIES } from '@/lib/categories'
 import type { DayStats } from '@/lib/types'
+
+const MIN_WIDTH_PER_BAR = 44
 
 interface SpendingChartProps {
   data: DayStats[]
@@ -38,6 +41,21 @@ function CustomTooltip({ active, payload, label }: TooltipProps) {
 }
 
 export function SpendingChart({ data, isLoading }: SpendingChartProps) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [containerWidth, setContainerWidth] = useState(320)
+
+  useEffect(() => {
+    function measure() {
+      if (containerRef.current) {
+        // subtract horizontal padding (p-4 = 32px total)
+        setContainerWidth(containerRef.current.offsetWidth - 32)
+      }
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [])
+
   if (isLoading) {
     return (
       <div className="mx-4 flex h-[220px] items-center justify-center rounded-xl bg-julius-card">
@@ -59,36 +77,48 @@ export function SpendingChart({ data, isLoading }: SpendingChartProps) {
     ...d.por_categoria,
   }))
 
+  // Garante que cada barra tem pelo menos MIN_WIDTH_PER_BAR px
+  const chartWidth = Math.max(data.length * MIN_WIDTH_PER_BAR, containerWidth)
+  const isScrollable = chartWidth > containerWidth
+
   return (
-    <div className="mx-4 rounded-xl bg-julius-card p-4">
-      <ResponsiveContainer width="100%" height={220}>
-        <BarChart data={chartData}>
-          <XAxis
-            dataKey="dia"
-            tick={{ fill: '#94A3B8', fontSize: 11 }}
-            axisLine={{ stroke: '#334155' }}
-            tickLine={false}
-          />
-          <YAxis
-            tick={{ fill: '#94A3B8', fontSize: 11 }}
-            axisLine={false}
-            tickLine={false}
-            width={45}
-            tickFormatter={(v) => `${v}€`}
-          />
-          <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
-          {CATEGORIES.map((cat, idx) => (
-            <Bar
-              key={cat.value}
-              dataKey={cat.value}
-              stackId="a"
-              fill={cat.color}
-              radius={idx === CATEGORIES.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]}
-              name={cat.label}
+    <div ref={containerRef} className="mx-4 rounded-xl bg-julius-card p-4 overflow-hidden">
+      <div className="mb-3 flex items-center justify-between">
+        <p className="text-xs font-semibold uppercase tracking-wider text-julius-muted">Gastos por dia</p>
+        {isScrollable && (
+          <p className="text-xs text-julius-muted">← desliza</p>
+        )}
+      </div>
+      <div className="overflow-x-auto">
+        <div style={{ width: `${chartWidth}px` }}>
+          <BarChart width={chartWidth} height={220} data={chartData}>
+            <XAxis
+              dataKey="dia"
+              tick={{ fill: '#94A3B8', fontSize: 11 }}
+              axisLine={{ stroke: '#334155' }}
+              tickLine={false}
             />
-          ))}
-        </BarChart>
-      </ResponsiveContainer>
+            <YAxis
+              tick={{ fill: '#94A3B8', fontSize: 11 }}
+              axisLine={false}
+              tickLine={false}
+              width={40}
+              tickFormatter={(v) => `${v}€`}
+            />
+            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
+            {CATEGORIES.map((cat, idx) => (
+              <Bar
+                key={cat.value}
+                dataKey={cat.value}
+                stackId="a"
+                fill={cat.color}
+                radius={idx === CATEGORIES.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]}
+                name={cat.label}
+              />
+            ))}
+          </BarChart>
+        </div>
+      </div>
     </div>
   )
 }

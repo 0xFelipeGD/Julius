@@ -1,12 +1,20 @@
 export type Tag = 'Alimentacao' | 'Transporte' | 'Saude' | 'Lazer' | 'Habitacao' | 'Outros'
-export type Periodo = 'semana' | 'quinzena' | 'mes' | 'total'
+export type Periodo = 'hoje' | 'semana' | 'mes' | 'trimestre' | 'total'
 export type ChatRole = 'user' | 'julius'
 export type MessageTipo = 'texto' | 'imagem' | 'confirmacao'
 export type Currency = 'EUR' | 'BRL'
 
+export interface LimitePeriodo {
+  diario?: number | null
+  mensal?: number | null
+}
+
+export type Limites = Partial<Record<Tag | 'all', LimitePeriodo>>
+
 export interface UserSettings {
   currency: Currency
   enabled_categories: Tag[]
+  limites?: Limites
 }
 
 export interface Transacao {

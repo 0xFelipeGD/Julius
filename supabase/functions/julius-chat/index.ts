@@ -1,5 +1,3 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -38,10 +36,13 @@ TAGS DISPONÍVEIS (usa exactamente): Alimentacao, Transporte, Saude, Lazer, Habi
 
 REGRAS PARA EXTRAIR GASTOS:
 - Se o utilizador menciona valor + algo comprado/pago = é um registo
+- REGRA DE DATA — MUITO IMPORTANTE: cada mensagem é INDEPENDENTE. Se o utilizador não mencionar data nesta mensagem, a data é SEMPRE a data de hoje (a DATA E HORA ACTUAL fornecida). Nunca herdes nem assumas datas de mensagens anteriores.
+- Se o utilizador mencionar uma data específica (passada ou futura), usa ESSA data exacta
+- Datas relativas como "ontem", "anteontem", "na semana passada", "amanhã", "dia 1 de março", etc. devem ser convertidas para a data correcta com base na DATA E HORA ACTUAL fornecida
 - Se não mencionar hora, usa a hora actual
-- Se não mencionar data, usa a data actual
 - Arredonda valores ao cêntimo
 - A descrição deve ser curta (máximo 50 caracteres)
+- É perfeitamente válido registar gastos passados ou futuros
 
 PERSONALIDADE:
 - Sermões dramáticos para gastos grandes ("Isto é uma tragédia financeira!")
@@ -62,44 +63,12 @@ interface RequestBody {
   tags_disponiveis?: string[]
 }
 
-function getJWTUserId(jwt: string): string | null {
-  try {
-    const payload = jwt.split('.')[1]
-    const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')))
-    return decoded.sub ?? null
-  } catch {
-    return null
-  }
-}
-
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    const authHeader = req.headers.get('Authorization')
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
-
-    // Decode JWT — gateway já verificou a assinatura
-    const jwt = authHeader.replace('Bearer ', '')
-    const userId = getJWTUserId(jwt)
-    if (!userId) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
-
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-    )
 
     const body: RequestBody = await req.json()
     const { mensagem, imagem_base64, historico, tags_disponiveis } = body
@@ -136,7 +105,7 @@ Deno.serve(async (req: Request) => {
       })
     }
 
-    // Add current message
+    // Add current message — sempre com data explícita para evitar que Julius herde contexto anterior
     if (imagem_base64) {
       messages.push({
         role: 'user',
@@ -149,7 +118,7 @@ Deno.serve(async (req: Request) => {
         ],
       })
     } else {
-      messages.push({ role: 'user', content: mensagem })
+      messages.push({ role: 'user', content: `[HOJE É ${todayStr} às ${nowHour}] ${mensagem}` })
     }
 
     // Call OpenAI

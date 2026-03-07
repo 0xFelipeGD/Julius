@@ -1,11 +1,15 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import { ExtractFilters } from '@/components/extrato/ExtractFilters'
 import { TransactionList } from '@/components/extrato/TransactionList'
-import { useTransactions, useDeleteTransaction } from '@/hooks/useTransactions'
+import { EditTransactionModal } from '@/components/extrato/EditTransactionModal'
+import { useTransactions, useDeleteTransaction, useUpdateTransaction } from '@/hooks/useTransactions'
 import { CATEGORY_LABELS } from '@/lib/categories'
 import type { Periodo, Tag, Transacao } from '@/lib/types'
+
+const CURRENT_YEAR = new Date().getFullYear()
+const YEARS = Array.from({ length: CURRENT_YEAR - 2024 }, (_, i) => 2025 + i)
 
 function exportCSV(transactions: Transacao[], periodo: Periodo) {
   const header = 'Dia,Descrição,Valor (€),Categoria'
@@ -17,9 +21,7 @@ function exportCSV(transactions: Transacao[], periodo: Periodo) {
     const categoria = CATEGORY_LABELS[t.tag] ?? t.tag
     return `${dia},${descricao},${valor},${categoria}`
   })
-
   const csv = [header, ...rows].join('\n')
-  // BOM (\ufeff) para o Excel abrir com acentos correctos
   const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
@@ -32,16 +34,48 @@ function exportCSV(transactions: Transacao[], periodo: Periodo) {
 export default function ExtratoPage() {
   const [periodo, setPeriodo] = useState<Periodo>('mes')
   const [tag, setTag] = useState<Tag | 'all'>('all')
+  const [year, setYear] = useState(CURRENT_YEAR)
+  const [editingTransaction, setEditingTransaction] = useState<Transacao | null>(null)
+  const yearScrollRef = useRef<HTMLDivElement>(null)
 
-  const { data: transactions, isLoading } = useTransactions(periodo, tag === 'all' ? undefined : tag)
+  useEffect(() => {
+    const el = yearScrollRef.current?.querySelector('[data-active="true"]') as HTMLElement | null
+    el?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
+  }, [year])
+
+  const { data: transactions, isLoading } = useTransactions(periodo, tag === 'all' ? undefined : tag, year)
   const deleteTransaction = useDeleteTransaction()
+  const updateTransaction = useUpdateTransaction()
 
-  function handleDelete(id: string) {
-    deleteTransaction.mutate(id)
+  function handleDelete(id: string) { deleteTransaction.mutate(id) }
+  function handleEdit(t: Transacao) { setEditingTransaction(t) }
+  function handleSave(id: string, updates: { valor: number; tag: Tag; descricao: string; dia: string }) {
+    updateTransaction.mutate({ id, updates })
   }
 
   return (
     <div>
+      {/* Selector de ano */}
+      <div
+        ref={yearScrollRef}
+        className="flex gap-2 overflow-x-auto px-4 pt-3 pb-1 no-scrollbar"
+      >
+        {YEARS.map((y) => (
+          <button
+            key={y}
+            data-active={y === year ? 'true' : 'false'}
+            onClick={() => setYear(y)}
+            className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+              y === year
+                ? 'bg-julius-accent text-white'
+                : 'border border-julius-border bg-julius-card text-julius-muted'
+            }`}
+          >
+            {y}
+          </button>
+        ))}
+      </div>
+
       <div className="flex items-center justify-between pr-4">
         <ExtractFilters
           periodo={periodo}
@@ -61,10 +95,19 @@ export default function ExtratoPage() {
           CSV
         </button>
       </div>
+
       <TransactionList
         transactions={transactions ?? []}
         isLoading={isLoading}
         onDelete={handleDelete}
+        onEdit={handleEdit}
+      />
+
+      <EditTransactionModal
+        transaction={editingTransaction}
+        onSave={handleSave}
+        onDelete={handleDelete}
+        onClose={() => setEditingTransaction(null)}
       />
     </div>
   )
