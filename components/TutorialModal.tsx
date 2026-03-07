@@ -6,27 +6,32 @@ const STEPS = [
   {
     icon: '💬',
     title: 'Fala com o Julius',
-    desc: 'Escreve o que gastaste em linguagem natural. Ex: "Paguei 12€ no almoço" ou "Fiz compras no supermercado por 45€".',
+    desc: 'Escreve o que gastaste em linguagem natural. Ex: "Paguei 12€ no almoço" ou "Gastei 45€ no supermercado ontem". O Julius percebe datas passadas e futuras.',
   },
   {
     icon: '📷',
     title: 'Tira foto ao recibo',
-    desc: 'Usa o ícone da câmara para fotografar qualquer recibo. O Julius lê e regista automaticamente.',
+    desc: 'Usa o ícone da câmara para fotografar qualquer recibo. O Julius lê, extrai o valor e a categoria automaticamente.',
   },
   {
     icon: '✅',
     title: 'Confirma o registo',
-    desc: 'O Julius mostra o que percebeu. Confirma se estiver certo, ou carrega em "Corrigir" para ajustar.',
+    desc: 'O Julius mostra o que percebeu — valor, categoria e data. Confirma se estiver certo, ou carrega em "Corrigir" para ajustar antes de guardar.',
   },
   {
     icon: '📊',
-    title: 'Acompanha os gastos',
-    desc: 'No Dashboard vês gráficos e totais. No Extrato tens a lista completa — podes filtrar por período e categoria.',
+    title: 'Dashboard & Extrato',
+    desc: 'No Dashboard vês gráficos por dia e categoria, totais e médias. Filtra por período (hoje, semana, mês, trimestre) e por categoria. No Extrato podes editar ou apagar qualquer gasto com um toque.',
+  },
+  {
+    icon: '🎯',
+    title: 'Limites de gasto',
+    desc: 'Nas Configurações define limites diários e mensais para cada categoria (ou no geral). O Dashboard mostra barras de progresso em tempo real — ficam vermelhas se ultrapassares o limite.',
   },
   {
     icon: '⚙️',
     title: 'Personaliza',
-    desc: 'Nas Configurações escolhes a moeda (€ ou R$) e quais categorias o Julius pode usar.',
+    desc: 'Escolhe a moeda (€ ou R$). Os teus dados ficam seguros na tua conta e podes exportar o extrato em CSV a qualquer momento.',
   },
 ]
 
@@ -44,18 +49,11 @@ export function TutorialModal({ open, onClose }: TutorialModalProps) {
   const isLast = step === STEPS.length - 1
 
   function handleNext() {
-    if (isLast) {
-      onClose()
-      setStep(0)
-    } else {
-      setStep((s) => s + 1)
-    }
+    if (isLast) { onClose(); setStep(0) }
+    else setStep((s) => s + 1)
   }
 
-  function handleClose() {
-    onClose()
-    setStep(0)
-  }
+  function handleClose() { onClose(); setStep(0) }
 
   return (
     <div

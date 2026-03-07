@@ -5,13 +5,22 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useUserSettings } from '@/hooks/useUserSettings'
 import { CATEGORIES } from '@/lib/categories'
+import { formatCurrency } from '@/lib/utils/currency'
 import { TutorialModal } from '@/components/TutorialModal'
-import type { Currency, Tag, Limites } from '@/lib/types'
+import type { Currency, Tag, Limites, LimitePeriodo } from '@/lib/types'
 
-const LIMITE_ROWS: { key: Tag | 'all'; label: string; color?: string }[] = [
+const LIMITE_KEYS: { key: Tag | 'all'; label: string; color?: string }[] = [
   { key: 'all', label: 'Geral' },
   ...CATEGORIES.map((c) => ({ key: c.value as Tag | 'all', label: c.label, color: c.color })),
 ]
+
+function getLabelFor(key: string) {
+  return LIMITE_KEYS.find((r) => r.key === key)?.label ?? key
+}
+
+function getColorFor(key: string) {
+  return LIMITE_KEYS.find((r) => r.key === key)?.color
+}
 
 export default function SettingsPage() {
   const router = useRouter()
@@ -22,50 +31,62 @@ export default function SettingsPage() {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [confirmReset, setConfirmReset] = useState(false)
 
-  // Local state para limites (editável antes de guardar)
-  const [limitesLocal, setLimitesLocal] = useState<Record<string, { diario: string; mensal: string }>>({})
+  // Limites locais (cópia editável antes de guardar)
+  const [limitesLocal, setLimitesLocal] = useState<Limites>({})
   const [savingLimites, setSavingLimites] = useState(false)
 
-  useEffect(() => {
-    loadSettings()
-  }, [loadSettings])
+  // Categoria seleccionada no selector
+  const [selectedKey, setSelectedKey] = useState<Tag | 'all'>('all')
+  const [inputDiario, setInputDiario] = useState('')
+  const [inputMensal, setInputMensal] = useState('')
 
-  // Sincronizar inputs quando carregam as settings
+  useEffect(() => { loadSettings() }, [loadSettings])
+
   useEffect(() => {
-    const initial: Record<string, { diario: string; mensal: string }> = {}
-    for (const row of LIMITE_ROWS) {
-      const l = limites[row.key]
-      initial[row.key] = {
-        diario: l?.diario != null ? String(l.diario) : '',
-        mensal: l?.mensal != null ? String(l.mensal) : '',
-      }
-    }
-    setLimitesLocal(initial)
+    setLimitesLocal(limites ?? {})
   }, [limites])
 
-  function setLimiteField(key: string, field: 'diario' | 'mensal', value: string) {
-    setLimitesLocal((prev) => ({ ...prev, [key]: { ...prev[key], [field]: value } }))
+  // Sincronizar inputs quando muda categoria seleccionada
+  useEffect(() => {
+    const l = limitesLocal[selectedKey]
+    setInputDiario(l?.diario != null ? String(l.diario) : '')
+    setInputMensal(l?.mensal != null ? String(l.mensal) : '')
+  }, [selectedKey, limitesLocal])
+
+  function applyCurrentInputs() {
+    const diario = inputDiario ? parseFloat(inputDiario.replace(',', '.')) : null
+    const mensal = inputMensal ? parseFloat(inputMensal.replace(',', '.')) : null
+    const limiteKey: LimitePeriodo = {
+      diario: diario && !isNaN(diario) ? diario : null,
+      mensal: mensal && !isNaN(mensal) ? mensal : null,
+    }
+    return { ...limitesLocal, [selectedKey]: limiteKey }
   }
 
   async function handleSaveLimites() {
     setSavingLimites(true)
     try {
-      const parsed: Limites = {}
-      for (const row of LIMITE_ROWS) {
-        const local = limitesLocal[row.key]
-        if (!local) continue
-        const diario = local.diario ? parseFloat(local.diario.replace(',', '.')) : null
-        const mensal = local.mensal ? parseFloat(local.mensal.replace(',', '.')) : null
-        parsed[row.key] = {
-          diario: diario && !isNaN(diario) ? diario : null,
-          mensal: mensal && !isNaN(mensal) ? mensal : null,
-        }
-      }
-      await saveLimites(parsed)
+      const updated = applyCurrentInputs()
+      await saveLimites(updated)
+      setLimitesLocal(updated)
     } finally {
       setSavingLimites(false)
     }
   }
+
+  function handleRemoveLimite(key: string) {
+    const updated = { ...limitesLocal }
+    delete updated[key as Tag | 'all']
+    setLimitesLocal(updated)
+    saveLimites(updated)
+  }
+
+  // Limites já definidos (excluindo o seleccionado actualmente para evitar duplicado)
+  const limitesDefinidos = Object.entries(limitesLocal).filter(
+    ([, v]) => v.diario != null || v.mensal != null
+  )
+
+  const currencySymbol = currency === 'EUR' ? '€' : 'R$'
 
   async function handleLogout() {
     const supabase = createClient()
@@ -77,9 +98,7 @@ export default function SettingsPage() {
     setResetting(true)
     try {
       const supabase = createClient()
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
+      const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
       await Promise.all([
         supabase.from('transacoes').delete().eq('user_id', user.id),
@@ -96,9 +115,7 @@ export default function SettingsPage() {
     setDeletingAccount(true)
     try {
       const supabase = createClient()
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
+      const { data: { session } } = await supabase.auth.getSession()
       if (!session) throw new Error('Sessão expirada.')
       const { error } = await supabase.functions.invoke('delete-account', {
         headers: { Authorization: `Bearer ${session.access_token}` },
@@ -114,16 +131,12 @@ export default function SettingsPage() {
     }
   }
 
-  const currencySymbol = currency === 'EUR' ? '€' : 'R$'
-
   return (
     <div className="px-4 py-4 space-y-6 pb-8">
 
       {/* Moeda */}
       <section>
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-julius-muted mb-3">
-          Moeda
-        </h2>
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-julius-muted mb-3">Moeda</h2>
         <div className="flex gap-2">
           {(['EUR', 'BRL'] as Currency[]).map((c) => (
             <button
@@ -143,67 +156,99 @@ export default function SettingsPage() {
 
       {/* Limites de Gasto */}
       <section>
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-julius-muted mb-3">
-          Limites de Gasto
-        </h2>
-        <div className="rounded-xl bg-julius-card border border-julius-border overflow-hidden divide-y divide-julius-border">
-          {/* Cabeçalho das colunas */}
-          <div className="flex items-center gap-2 px-4 py-2">
-            <div className="flex-1" />
-            <span className="w-24 text-center text-xs font-medium text-julius-muted">Diário ({currencySymbol})</span>
-            <span className="w-24 text-center text-xs font-medium text-julius-muted">Mensal ({currencySymbol})</span>
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-julius-muted mb-3">Limites de Gasto</h2>
+        <div className="rounded-xl bg-julius-card border border-julius-border p-4 space-y-3">
+          {/* Selector de categoria */}
+          <div className="relative">
+            <select
+              value={selectedKey}
+              onChange={(e) => setSelectedKey(e.target.value as Tag | 'all')}
+              className="w-full appearance-none rounded-xl border border-julius-border bg-julius-bg px-3 py-2.5 text-sm text-julius-text focus:border-julius-accent focus:outline-none cursor-pointer"
+            >
+              {LIMITE_KEYS.map((r) => (
+                <option key={r.key} value={r.key}>{r.label}</option>
+              ))}
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+              <svg className="h-4 w-4 text-julius-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
           </div>
 
-          {LIMITE_ROWS.map((row) => (
-            <div key={row.key} className="flex items-center gap-2 px-4 py-3">
-              <div className="flex flex-1 items-center gap-2 min-w-0">
-                {row.color ? (
-                  <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: row.color }} />
-                ) : (
-                  <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-julius-muted" />
-                )}
-                <span className="truncate text-sm text-julius-text">{row.label}</span>
-              </div>
+          {/* Inputs Diário + Mensal */}
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <label className="mb-1 block text-xs text-julius-muted">Diário ({currencySymbol})</label>
               <input
-                type="number"
+                type="text"
                 inputMode="decimal"
-                step="0.01"
-                min="0"
                 placeholder="—"
-                value={limitesLocal[row.key]?.diario ?? ''}
-                onChange={(e) => setLimiteField(row.key, 'diario', e.target.value)}
-                className="w-24 rounded-lg border border-julius-border bg-julius-bg px-2 py-1.5 text-center text-sm text-julius-text placeholder:text-julius-muted focus:border-julius-accent focus:outline-none"
-              />
-              <input
-                type="number"
-                inputMode="decimal"
-                step="0.01"
-                min="0"
-                placeholder="—"
-                value={limitesLocal[row.key]?.mensal ?? ''}
-                onChange={(e) => setLimiteField(row.key, 'mensal', e.target.value)}
-                className="w-24 rounded-lg border border-julius-border bg-julius-bg px-2 py-1.5 text-center text-sm text-julius-text placeholder:text-julius-muted focus:border-julius-accent focus:outline-none"
+                value={inputDiario}
+                onChange={(e) => setInputDiario(e.target.value)}
+                className="w-full rounded-xl border border-julius-border bg-julius-bg px-3 py-2 text-sm text-julius-text placeholder:text-julius-muted focus:border-julius-accent focus:outline-none"
               />
             </div>
-          ))}
-
-          <div className="px-4 py-3">
-            <button
-              onClick={handleSaveLimites}
-              disabled={savingLimites}
-              className="w-full rounded-xl bg-julius-accent py-2.5 text-sm font-medium text-white disabled:opacity-50 active:opacity-80"
-            >
-              {savingLimites ? 'A guardar...' : 'Guardar limites'}
-            </button>
+            <div className="flex-1">
+              <label className="mb-1 block text-xs text-julius-muted">Mensal ({currencySymbol})</label>
+              <input
+                type="text"
+                inputMode="decimal"
+                placeholder="—"
+                value={inputMensal}
+                onChange={(e) => setInputMensal(e.target.value)}
+                className="w-full rounded-xl border border-julius-border bg-julius-bg px-3 py-2 text-sm text-julius-text placeholder:text-julius-muted focus:border-julius-accent focus:outline-none"
+              />
+            </div>
           </div>
+
+          <button
+            onClick={handleSaveLimites}
+            disabled={savingLimites}
+            className="w-full rounded-xl bg-julius-accent py-2.5 text-sm font-medium text-white disabled:opacity-50 active:opacity-80"
+          >
+            {savingLimites ? 'A guardar...' : 'Guardar limite'}
+          </button>
+
+          {/* Limites já definidos */}
+          {limitesDefinidos.length > 0 && (
+            <div className="space-y-1.5 pt-1">
+              <p className="text-xs text-julius-muted">Limites definidos</p>
+              {limitesDefinidos.map(([key, v]) => {
+                const color = getColorFor(key)
+                const label = getLabelFor(key)
+                const parts = []
+                if (v.diario != null) parts.push(`Diário: ${formatCurrency(v.diario, currency)}`)
+                if (v.mensal != null) parts.push(`Mensal: ${formatCurrency(v.mensal, currency)}`)
+                return (
+                  <div key={key} className="flex items-center justify-between rounded-lg bg-julius-bg px-3 py-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span
+                        className="h-2 w-2 shrink-0 rounded-full"
+                        style={{ backgroundColor: color ?? '#94A3B8' }}
+                      />
+                      <span className="text-xs text-julius-text truncate">{label}</span>
+                      <span className="text-xs text-julius-muted truncate">{parts.join(' · ')}</span>
+                    </div>
+                    <button
+                      onClick={() => handleRemoveLimite(key)}
+                      className="ml-2 shrink-0 text-julius-muted hover:text-julius-danger"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="h-3.5 w-3.5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
       </section>
 
       {/* Tutorial */}
       <section>
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-julius-muted mb-3">
-          Ajuda
-        </h2>
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-julius-muted mb-3">Ajuda</h2>
         <button
           onClick={() => setTutorialOpen(true)}
           className="flex w-full items-center justify-between rounded-xl bg-julius-card border border-julius-border px-4 py-3 text-sm font-medium text-julius-text hover:border-julius-accent transition-colors"
@@ -220,9 +265,7 @@ export default function SettingsPage() {
 
       {/* Conta */}
       <section>
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-julius-muted mb-3">
-          Conta
-        </h2>
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-julius-muted mb-3">Conta</h2>
         <div className="rounded-xl bg-julius-card border border-julius-border overflow-hidden divide-y divide-julius-border">
           <button
             onClick={handleLogout}
@@ -236,9 +279,7 @@ export default function SettingsPage() {
 
           {confirmReset ? (
             <div className="px-4 py-3 bg-julius-bg">
-              <p className="text-sm text-julius-warning mb-3 font-medium">
-                Tens a certeza? Apaga TODAS as transações e histórico do chat.
-              </p>
+              <p className="text-sm text-julius-warning mb-3 font-medium">Tens a certeza? Apaga TODAS as transações e histórico do chat.</p>
               <div className="flex gap-2">
                 <button onClick={() => setConfirmReset(false)} className="flex-1 rounded-lg bg-julius-card py-2 text-sm font-medium text-julius-muted border border-julius-border">Cancelar</button>
                 <button onClick={handleReset} disabled={resetting} className="flex-1 rounded-lg bg-julius-danger py-2 text-sm font-medium text-white disabled:opacity-60">
@@ -257,9 +298,7 @@ export default function SettingsPage() {
 
           {confirmDelete ? (
             <div className="px-4 py-3 bg-julius-bg">
-              <p className="text-sm text-julius-danger mb-3 font-medium">
-                Esta ação é irreversível. A tua conta e todos os dados serão eliminados permanentemente.
-              </p>
+              <p className="text-sm text-julius-danger mb-3 font-medium">Esta ação é irreversível. A tua conta e todos os dados serão eliminados permanentemente.</p>
               <div className="flex gap-2">
                 <button onClick={() => setConfirmDelete(false)} className="flex-1 rounded-lg bg-julius-card py-2 text-sm font-medium text-julius-muted border border-julius-border">Cancelar</button>
                 <button onClick={handleDeleteAccount} disabled={deletingAccount} className="flex-1 rounded-lg bg-julius-danger py-2 text-sm font-medium text-white disabled:opacity-60">
