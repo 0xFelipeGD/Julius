@@ -49,9 +49,13 @@ export function BudgetProgress({ tag }: BudgetProgressProps) {
             </span>
           </div>
           <ProgressBar value={todayTotal} max={limite.diario} color="#2563EB" />
-          {todayTotal > limite.diario && (
+          {todayTotal > limite.diario ? (
             <p className="mt-1 text-xs text-julius-danger">
               +{formatCurrency(todayTotal - limite.diario, currency)} acima do limite
+            </p>
+          ) : (
+            <p className="mt-1 text-xs text-julius-muted">
+              Pode gastar mais {formatCurrency(limite.diario - todayTotal, currency)} hoje
             </p>
           )}
         </div>
@@ -67,9 +71,13 @@ export function BudgetProgress({ tag }: BudgetProgressProps) {
             </span>
           </div>
           <ProgressBar value={monthTotal} max={limite.mensal} color="#16A34A" />
-          {monthTotal > limite.mensal && (
+          {monthTotal > limite.mensal ? (
             <p className="mt-1 text-xs text-julius-danger">
               +{formatCurrency(monthTotal - limite.mensal, currency)} acima do limite
+            </p>
+          ) : (
+            <p className="mt-1 text-xs text-julius-muted">
+              Pode gastar mais {formatCurrency(limite.mensal - monthTotal, currency)} este mês
             </p>
           )}
         </div>
