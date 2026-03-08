@@ -38,11 +38,15 @@ export function useUserSettings() {
         data: { user },
       } = await supabase.auth.getUser()
       if (!user) return
-      await supabase
+      const { error } = await supabase
         .from('user_settings')
-        .upsert({ user_id: user.id, currency: value }, { onConflict: 'user_id' })
+        .upsert(
+          { user_id: user.id, currency: value, enabled_categories: enabledCategories, limites },
+          { onConflict: 'user_id' }
+        )
+      if (error) console.error('saveCurrency error:', error)
     },
-    [supabase, setCurrency]
+    [supabase, setCurrency, enabledCategories, limites]
   )
 
   const saveLimites = useCallback(
@@ -52,11 +56,15 @@ export function useUserSettings() {
         data: { user },
       } = await supabase.auth.getUser()
       if (!user) return
-      await supabase
+      const { error } = await supabase
         .from('user_settings')
-        .upsert({ user_id: user.id, limites: value }, { onConflict: 'user_id' })
+        .upsert(
+          { user_id: user.id, limites: value, currency, enabled_categories: enabledCategories },
+          { onConflict: 'user_id' }
+        )
+      if (error) console.error('saveLimites error:', error)
     },
-    [supabase, setLimites]
+    [supabase, setLimites, currency, enabledCategories]
   )
 
   return { currency, enabledCategories, limites, loadSettings, saveCurrency, saveLimites }
