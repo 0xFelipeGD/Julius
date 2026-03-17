@@ -7,6 +7,9 @@ import { EditTransactionModal } from '@/components/extrato/EditTransactionModal'
 import { useTransactions, useDeleteTransaction, useUpdateTransaction } from '@/hooks/useTransactions'
 import { CATEGORY_LABELS } from '@/lib/categories'
 import type { Periodo, Tag, Transacao } from '@/lib/types'
+import { generateReport } from '@/lib/pdf/generateReport'
+import { getCalendarDays } from '@/lib/utils/period'
+import { useUserSettingsStore } from '@/stores/userSettingsStore'
 
 const CURRENT_YEAR = new Date().getFullYear()
 const YEARS = Array.from({ length: CURRENT_YEAR - 2024 }, (_, i) => 2025 + i)
@@ -46,6 +49,15 @@ export default function ExtratoPage() {
   const { data: transactions, isLoading } = useTransactions(periodo, tag === 'all' ? undefined : tag, year)
   const deleteTransaction = useDeleteTransaction()
   const updateTransaction = useUpdateTransaction()
+  const currency = useUserSettingsStore((s) => s.currency)
+
+  function handleExportPDF() {
+    if (!transactions?.length) return
+    const total = transactions.reduce((sum, t) => sum + Number(t.valor), 0)
+    const average = total / getCalendarDays(periodo, year)
+    const doc = generateReport({ transactions, periodo, year, currency, total, average })
+    doc.save(`julius-relatorio-${periodo}-${new Date().toISOString().split('T')[0]}.pdf`)
+  }
 
   function handleDelete(id: string) { deleteTransaction.mutate(id) }
   function handleEdit(t: Transacao) { setEditingTransaction(t) }
@@ -83,17 +95,30 @@ export default function ExtratoPage() {
           onPeriodoChange={setPeriodo}
           onTagChange={setTag}
         />
-        <button
-          onClick={() => exportCSV(transactions ?? [], periodo)}
-          disabled={!transactions?.length}
-          title="Exportar CSV"
-          className="flex shrink-0 items-center gap-1.5 rounded-xl bg-julius-card border border-julius-border px-3 py-2.5 text-sm text-julius-muted transition-colors hover:text-julius-text disabled:opacity-40"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-4 w-4">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
-          </svg>
-          CSV
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => exportCSV(transactions ?? [], periodo)}
+            disabled={!transactions?.length}
+            title="Exportar CSV"
+            className="flex shrink-0 items-center gap-1.5 rounded-xl bg-julius-card border border-julius-border px-3 py-2.5 text-sm text-julius-muted transition-colors hover:text-julius-text disabled:opacity-40"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-4 w-4">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+            </svg>
+            CSV
+          </button>
+          <button
+            onClick={handleExportPDF}
+            disabled={!transactions?.length}
+            title="Exportar PDF"
+            className="flex shrink-0 items-center gap-1.5 rounded-xl bg-julius-card border border-julius-border px-3 py-2.5 text-sm text-julius-muted transition-colors hover:text-julius-text disabled:opacity-40"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-4 w-4">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+            </svg>
+            PDF
+          </button>
+        </div>
       </div>
 
       <TransactionList

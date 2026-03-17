@@ -117,10 +117,17 @@ export default function SettingsPage() {
       const supabase = createClient()
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) throw new Error('Sessão expirada.')
-      const { error } = await supabase.functions.invoke('delete-account', {
-        headers: { Authorization: `Bearer ${session.access_token}` },
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      const res = await fetch(`${supabaseUrl}/functions/v1/delete-account`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'apikey': supabaseAnonKey,
+          'Content-Type': 'application/json',
+        },
       })
-      if (error) throw error
+      if (!res.ok) throw new Error(`Erro ${res.status}`)
       await supabase.auth.signOut()
       window.location.href = '/login'
     } catch (err) {

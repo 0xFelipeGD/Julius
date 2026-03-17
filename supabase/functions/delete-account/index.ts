@@ -5,12 +5,17 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-function getJWTUserId(jwt: string): string | null {
+function getUserIdFromJWT(jwt: string): string | null {
   try {
     const payload = jwt.split('.')[1]
-    const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')))
+    if (!payload) return null
+    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/')
+    const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4)
+    const bytes = Uint8Array.from(atob(padded), (c) => c.charCodeAt(0))
+    const decoded = JSON.parse(new TextDecoder().decode(bytes))
     return decoded.sub ?? null
-  } catch {
+  } catch (e) {
+    console.error('JWT decode error:', e)
     return null
   }
 }
@@ -22,34 +27,33 @@ Deno.serve(async (req: Request) => {
 
   try {
     const authHeader = req.headers.get('Authorization')
+    console.log('Authorization header present:', !!authHeader, 'length:', authHeader?.length)
+
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      return new Response(JSON.stringify({ error: 'No Authorization header' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
-    // Decode JWT — gateway já verificou a assinatura
-    const jwt = authHeader.replace('Bearer ', '')
-    const userId = getJWTUserId(jwt)
+    const jwt = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader
+    const userId = getUserIdFromJWT(jwt)
+    console.log('Extracted userId:', userId)
+
     if (!userId) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      return new Response(JSON.stringify({ error: 'Invalid token' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
-    // Use service role to delete the account (cascades to all user data)
     const adminClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     )
 
     const { error: deleteError } = await adminClient.auth.admin.deleteUser(userId)
-
-    if (deleteError) {
-      throw deleteError
-    }
+    if (deleteError) throw deleteError
 
     return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

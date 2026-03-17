@@ -4,16 +4,8 @@ import { useState, useRef } from 'react'
 import { formatCurrency } from '@/lib/utils/currency'
 import { formatTime } from '@/lib/utils/date'
 import { useUserSettingsStore } from '@/stores/userSettingsStore'
-import type { Transacao, Tag } from '@/lib/types'
-
-const TAG_CONFIG: Record<Tag, { label: string; color: string; bg: string; icon: string }> = {
-  Alimentacao: { label: 'Alimentação', color: 'text-green-500', bg: 'bg-green-600/20', icon: '🍽️' },
-  Transporte: { label: 'Transporte', color: 'text-blue-500', bg: 'bg-blue-600/20', icon: '🚗' },
-  Saude: { label: 'Saúde', color: 'text-red-500', bg: 'bg-red-600/20', icon: '🏥' },
-  Lazer: { label: 'Lazer', color: 'text-purple-500', bg: 'bg-purple-600/20', icon: '🎮' },
-  Habitacao: { label: 'Habitação', color: 'text-yellow-500', bg: 'bg-yellow-600/20', icon: '🏠' },
-  Outros: { label: 'Outros', color: 'text-slate-400', bg: 'bg-slate-600/20', icon: '📦' },
-}
+import { CATEGORY_LABELS, CATEGORY_EMOJIS, CATEGORY_BG_MUTED, CATEGORY_TEXT } from '@/lib/categories'
+import type { Transacao } from '@/lib/types'
 
 interface TransactionItemProps {
   transaction: Transacao
@@ -26,7 +18,6 @@ export function TransactionItem({ transaction, onDelete, onEdit }: TransactionIt
   const [startX, setStartX] = useState(0)
   const swipedRef = useRef(false)
   const currency = useUserSettingsStore((s) => s.currency)
-  const tag = TAG_CONFIG[transaction.tag]
 
   function handleTouchStart(e: React.TouchEvent) {
     setStartX(e.touches[0].clientX)
@@ -70,12 +61,12 @@ export function TransactionItem({ transaction, onDelete, onEdit }: TransactionIt
           showDelete ? '-translate-x-20' : 'translate-x-0'
         }`}
       >
-        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${tag.bg}`}>
-          <span className="text-base">{tag.icon}</span>
+        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${CATEGORY_BG_MUTED[transaction.tag]}`}>
+          <span className="text-base">{CATEGORY_EMOJIS[transaction.tag]}</span>
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-julius-text truncate">{transaction.descricao}</p>
-          <p className="text-xs text-julius-muted">{tag.label} · {formatTime(transaction.hora)}</p>
+          <p className={`text-xs ${CATEGORY_TEXT[transaction.tag]}`}>{CATEGORY_LABELS[transaction.tag]} · {formatTime(transaction.hora)}</p>
         </div>
         <p className="text-sm font-semibold text-julius-text shrink-0">
           {formatCurrency(transaction.valor, currency)}

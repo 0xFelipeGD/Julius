@@ -3,16 +3,8 @@
 import { useState } from 'react'
 import { formatCurrency } from '@/lib/utils/currency'
 import { useUserSettingsStore } from '@/stores/userSettingsStore'
-import type { TransacaoPendente, Tag } from '@/lib/types'
-
-const TAG_CONFIG: Record<Tag, { label: string; color: string; icon: string }> = {
-  Alimentacao: { label: 'Alimentação', color: 'bg-green-600', icon: '🍽️' },
-  Transporte: { label: 'Transporte', color: 'bg-blue-600', icon: '🚗' },
-  Saude: { label: 'Saúde', color: 'bg-red-600', icon: '🏥' },
-  Lazer: { label: 'Lazer', color: 'bg-purple-600', icon: '🎮' },
-  Habitacao: { label: 'Habitação', color: 'bg-yellow-600', icon: '🏠' },
-  Outros: { label: 'Outros', color: 'bg-slate-500', icon: '📦' },
-}
+import { CATEGORY_LABELS, CATEGORY_EMOJIS, CATEGORY_BG } from '@/lib/categories'
+import type { TransacaoPendente } from '@/lib/types'
 
 interface TransactionConfirmProps {
   transacao: TransacaoPendente
@@ -25,7 +17,6 @@ export function TransactionConfirm({ transacao, onConfirm, onCorrect }: Transact
   const [correction, setCorrection] = useState('')
   const [confirming, setConfirming] = useState(false)
   const currency = useUserSettingsStore((s) => s.currency)
-  const tag = TAG_CONFIG[transacao.tag]
 
   function handleCorrect() {
     if (correction.trim()) {
@@ -48,12 +39,12 @@ export function TransactionConfirm({ transacao, onConfirm, onCorrect }: Transact
   return (
     <div className="rounded-xl border border-julius-border bg-julius-card p-4">
       <div className="mb-3 flex items-center gap-3">
-        <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${tag.color}`}>
-          <span className="text-lg">{tag.icon}</span>
+        <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${CATEGORY_BG[transacao.tag]}`}>
+          <span className="text-lg">{CATEGORY_EMOJIS[transacao.tag]}</span>
         </div>
         <div className="flex-1">
           <p className="text-lg font-bold text-julius-text">{formatCurrency(transacao.valor, currency)}</p>
-          <p className="text-sm text-julius-muted">{tag.label}</p>
+          <p className="text-sm text-julius-muted">{CATEGORY_LABELS[transacao.tag]}</p>
         </div>
       </div>
 

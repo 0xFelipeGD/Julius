@@ -28,6 +28,21 @@ const CONFIRM_MESSAGES: Array<(desc: string, valor: number) => string> = [
   (desc, valor) => `Ok, ${desc}: ${valor.toFixed(2)}€. A dívida com o futuro cresce.`,
   (desc, valor) => `${desc} registado: ${valor.toFixed(2)}€. O Julius suspira... mas anota sempre.`,
   (desc, valor) => `Gravado a ferro e fogo! ${desc}, ${valor.toFixed(2)}€. O dinheiro vai, o registo fica.`,
+  (desc, valor) => `${valor.toFixed(2)}€?! Em ${desc}?! Deixa-me sentar que me deu uma tontura.`,
+  (desc, valor) => `Registado. ${desc}, ${valor.toFixed(2)}€. Mais um prego no caixão da poupança.`,
+  (desc, valor) => `${desc} por ${valor.toFixed(2)}€. Se o dinheiro chorasse, já tinhas uma inundação.`,
+  (desc, valor) => `Anotado! ${valor.toFixed(2)}€ em ${desc}. Estou a ficar sem tinta de tanto registar gastos.`,
+  (desc, valor) => `${valor.toFixed(2)}€... ${desc}... O Julius precisa de um momento.`,
+  (desc, valor) => `Feito! ${desc}: ${valor.toFixed(2)}€. A carteira pediu-me para te dar um recado: "pára".`,
+  (desc, valor) => `Registado com lágrimas nos olhos. ${desc}, ${valor.toFixed(2)}€. Era uma vez uma poupança...`,
+  (desc, valor) => `${desc} guardado: ${valor.toFixed(2)}€. Sabes o que se comprava com isso nos meus tempos?`,
+  (desc, valor) => `Ok, ${valor.toFixed(2)}€ em ${desc}. Vou acrescentar isto ao capítulo "Decisões Questionáveis".`,
+  (desc, valor) => `Gravado! ${desc} — ${valor.toFixed(2)}€. O teu eu do futuro vai ter uma conversa séria contigo.`,
+  (desc, valor) => `${valor.toFixed(2)}€ registados. ${desc}. O Julius perdoa, mas o saldo bancário não.`,
+  (desc, valor) => `Anotado. ${desc}, ${valor.toFixed(2)}€. Cada vez que registo um gasto, perco um cabelo.`,
+  (desc, valor) => `${desc}: ${valor.toFixed(2)}€. Pronto, está registado. Agora vou ali chorar um bocadinho.`,
+  (desc, valor) => `Feito! ${valor.toFixed(2)}€ em ${desc}. A conta bancária mandou cumprimentos... e um pedido de socorro.`,
+  (desc, valor) => `Registado com profunda consternação. ${desc}, ${valor.toFixed(2)}€. Fico à espera do milagre.`,
 ]
 
 export function useJuliusChat() {

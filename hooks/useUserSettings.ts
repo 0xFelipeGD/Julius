@@ -21,7 +21,7 @@ export function useUserSettings() {
       .from('user_settings')
       .select('currency, enabled_categories, limites')
       .eq('user_id', user.id)
-      .single()
+      .maybeSingle()
 
     if (data) {
       setCurrency((data.currency as Currency) ?? 'EUR')

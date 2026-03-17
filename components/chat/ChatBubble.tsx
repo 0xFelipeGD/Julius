@@ -30,7 +30,9 @@ export function ChatBubble({ message, onConfirm, onCorrect }: ChatBubbleProps) {
               : 'rounded-bl-md bg-julius-card text-julius-text'
           }`}
         >
-          <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+          <p className="text-sm leading-relaxed whitespace-pre-wrap">
+            {message.content || 'O Julius ficou sem palavras... Tenta reformular ou enviar de novo.'}
+          </p>
         </div>
         {message.transacao_pendente && onConfirm && onCorrect && (
           <div className="mt-2">
