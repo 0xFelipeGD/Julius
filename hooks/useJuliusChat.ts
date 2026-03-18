@@ -96,8 +96,16 @@ export function useJuliusChat() {
     setIsLoading(true)
 
     try {
-      const { data: { session } } = await supabase.auth.getSession()
+      let { data: { session } } = await supabase.auth.getSession()
       if (!session) throw new Error('Sessão expirada. Faz login novamente.')
+
+      // Mobile browsers suspend JS in background — auto-refresh may not fire.
+      // Force refresh if token is expired or expiring in the next 60s.
+      const now = Math.floor(Date.now() / 1000)
+      if (!session.expires_at || session.expires_at < now + 60) {
+        const { data: refreshed } = await supabase.auth.refreshSession()
+        if (refreshed.session) session = refreshed.session
+      }
 
       const currentUserId = session.user.id
 
@@ -173,8 +181,14 @@ export function useJuliusChat() {
   }, [messages, supabase])
 
   const confirmTransaction = useCallback(async (transacao: TransacaoPendente): Promise<void> => {
-    const { data: { session } } = await supabase.auth.getSession()
+    let { data: { session } } = await supabase.auth.getSession()
     if (!session) throw new Error('Sessão expirada.')
+
+    const now = Math.floor(Date.now() / 1000)
+    if (!session.expires_at || session.expires_at < now + 60) {
+      const { data: refreshed } = await supabase.auth.refreshSession()
+      if (refreshed.session) session = refreshed.session
+    }
 
     const [day, month, year] = transacao.dia.split('/')
     const diaISO = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
