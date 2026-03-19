@@ -16,7 +16,16 @@ export default function LoginPage() {
   const [success, setSuccess] = useState('')
   const router = useRouter()
   const supabase = createClient()
-  const { canInstall, install } = useInstallPrompt()
+  const { canInstall, installed, install } = useInstallPrompt()
+  const [showInstallGuide, setShowInstallGuide] = useState(false)
+
+  async function handleInstallClick() {
+    if (canInstall) {
+      install()
+    } else {
+      setShowInstallGuide(true)
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -129,17 +138,55 @@ export default function LoginPage() {
           </button>
         </form>
       )}
-      {canInstall && (
-        <button
-          type="button"
-          onClick={install}
-          className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl border border-julius-border bg-julius-card py-3 text-sm font-medium text-julius-muted transition-colors hover:text-julius-text"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-4 w-4">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
-          </svg>
-          Instalar Julius como App
-        </button>
+      {!installed && (
+        <div className="mt-6">
+          <button
+            type="button"
+            onClick={handleInstallClick}
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-julius-border bg-julius-card py-3 text-sm font-medium text-julius-muted transition-colors hover:border-julius-accent hover:text-julius-text active:opacity-80"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-4 w-4">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+            </svg>
+            Instalar Julius como App
+          </button>
+        </div>
+      )}
+
+      {/* Install guide modal */}
+      {showInstallGuide && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 px-4 pb-8" onClick={() => setShowInstallGuide(false)}>
+          <div className="w-full max-w-sm rounded-2xl bg-julius-card border border-julius-border p-5" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-base font-semibold text-julius-text">Instalar Julius</h3>
+              <button onClick={() => setShowInstallGuide(false)} className="text-julius-muted hover:text-julius-text">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="h-5 w-5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="space-y-3 text-sm text-julius-muted">
+              <div className="flex items-start gap-3">
+                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-julius-accent text-[11px] font-bold text-white">1</span>
+                <p>No Chrome, toca nos <strong className="text-julius-text">3 pontos ⋮</strong> no canto superior direito</p>
+              </div>
+              <div className="flex items-start gap-3">
+                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-julius-accent text-[11px] font-bold text-white">2</span>
+                <p>Seleciona <strong className="text-julius-text">&quot;Adicionar ao ecrã principal&quot;</strong> ou <strong className="text-julius-text">&quot;Instalar app&quot;</strong></p>
+              </div>
+              <div className="flex items-start gap-3">
+                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-julius-accent text-[11px] font-bold text-white">3</span>
+                <p>Confirma e o Julius fica no teu ecrã inicial como uma app</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowInstallGuide(false)}
+              className="mt-5 w-full rounded-xl bg-julius-accent py-2.5 text-sm font-semibold text-white"
+            >
+              Entendido
+            </button>
+          </div>
+        </div>
       )}
     </div>
   )

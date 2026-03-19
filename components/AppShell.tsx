@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useUserSettings } from '@/hooks/useUserSettings'
+import { captureInstallPrompt } from '@/hooks/useInstallPrompt'
 import { JuliusLightbox } from '@/components/JuliusLightbox'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { IOSInstallHint } from '@/components/IOSInstallHint'
@@ -63,6 +64,12 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const { loadSettings } = useUserSettings()
+
+  useEffect(() => {
+    // Capture beforeinstallprompt early so it's available on any page
+    const cleanup = captureInstallPrompt()
+    return cleanup
+  }, [])
 
   useEffect(() => {
     async function init() {
