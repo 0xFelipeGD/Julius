@@ -5,10 +5,12 @@ import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useUserSettings } from '@/hooks/useUserSettings'
+import { useUserSettingsStore } from '@/stores/userSettingsStore'
 import { captureInstallPrompt } from '@/hooks/useInstallPrompt'
 import { JuliusLightbox } from '@/components/JuliusLightbox'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { IOSInstallHint } from '@/components/IOSInstallHint'
+import { getPersona, getPersonaImage } from '@/lib/prompts'
 
 const tabs = [
   {
@@ -56,7 +58,11 @@ function getTabLabel(pathname: string): string {
   if (pathname.startsWith('/chat')) return 'Chat'
   if (pathname.startsWith('/dashboard')) return 'Dashboard'
   if (pathname.startsWith('/extrato')) return 'Extrato'
-  if (pathname.startsWith('/settings')) return 'Configurações'
+  if (pathname === '/settings/region') return 'Region'
+  if (pathname === '/settings/persona') return 'Persona'
+  if (pathname === '/settings/receipt') return 'Receipt Photos'
+  if (pathname === '/settings/limits') return 'Spend Limits'
+  if (pathname.startsWith('/settings')) return 'Settings'
   return 'Julius'
 }
 
@@ -64,6 +70,9 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const { loadSettings } = useUserSettings()
+  const persona = useUserSettingsStore((s) => s.persona)
+  const personaConfig = getPersona(persona)
+  const personaImage = getPersonaImage(personaConfig.id)
 
   useEffect(() => {
     // Capture beforeinstallprompt early so it's available on any page
@@ -94,9 +103,9 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
         <button
           onClick={() => setLightboxOpen(true)}
           className="flex h-8 w-8 shrink-0 overflow-hidden rounded-full ring-2 ring-julius-border hover:ring-julius-accent transition-all active:scale-95"
-          aria-label="Ver Julius"
+          aria-label={personaConfig.name}
         >
-          <img src="/julius.png" alt="Julius" className="h-full w-full object-cover" />
+          <img src={personaImage} alt={personaConfig.name} className="h-full w-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = '/personas/julius.png' }} />
         </button>
       </header>
 

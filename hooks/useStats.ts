@@ -82,6 +82,29 @@ function getPeriodRange(periodo: Periodo, year: number): { from: string; to: str
   }
 }
 
+function fillMissingDays(stats: DayStats[], from: string, to: string): DayStats[] {
+  const filled: DayStats[] = []
+  const existing = new Map(stats.map(s => [s.dia, s]))
+  const current = new Date(from + 'T00:00:00')
+  const end = new Date(to + 'T00:00:00')
+
+  // Cap end to today to avoid future empty days
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const cappedEnd = end < today ? end : today
+
+  while (current <= cappedEnd) {
+    const iso = current.toISOString().split('T')[0]
+    filled.push(existing.get(iso) ?? {
+      dia: iso,
+      total: 0,
+      por_categoria: Object.fromEntries(ALL_TAGS.map(t => [t, 0])) as Record<Tag, number>,
+    })
+    current.setDate(current.getDate() + 1)
+  }
+  return filled
+}
+
 export function useStats(periodo: Periodo, tag?: Tag, year?: number) {
   const supabase = createClient()
   const effectiveYear = year ?? new Date().getFullYear()
@@ -118,11 +141,14 @@ export function useStats(periodo: Periodo, tag?: Tag, year?: number) {
         return { dia, total, por_categoria }
       })
 
-      const total = dayStats.reduce((sum, d) => sum + d.total, 0)
+      // Fill missing days with zero-spend entries
+      const filledDayStats = fillMissingDays(dayStats, from, to)
+
+      const total = filledDayStats.reduce((sum, d) => sum + d.total, 0)
       const calendarDays = getCalendarDays(periodo, effectiveYear)
       const average = total / calendarDays
 
-      return { dayStats, total, average }
+      return { dayStats: filledDayStats, total, average }
     },
   })
 }

@@ -5,8 +5,8 @@ import './globals.css'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Julius - Agente Financeiro',
-  description: 'O teu agente financeiro pessoal com personalidade',
+  title: 'Julius - Personal Finance',
+  description: 'Your personal financial agent with personality',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
@@ -35,9 +35,9 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="pt">
+    <html lang="en">
       <body className={`${inter.className} antialiased`}>
-        <div className="mx-auto max-w-[430px] min-h-dvh bg-julius-bg relative">
+        <div className="mx-auto max-w-107.5 min-h-dvh bg-julius-bg relative">
           {children}
         </div>
       </body>

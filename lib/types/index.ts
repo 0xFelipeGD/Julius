@@ -1,8 +1,10 @@
-export type Tag = 'Alimentacao' | 'Transporte' | 'Saude' | 'Lazer' | 'Habitacao' | 'Outros'
+export type Tag = 'Alimentacao' | 'Transporte' | 'Saude' | 'Lazer' | 'Habitacao' | 'Impostos' | 'Outros'
 export type Periodo = 'hoje' | 'semana' | 'mes' | 'trimestre' | 'total'
 export type ChatRole = 'user' | 'julius'
 export type MessageTipo = 'texto' | 'imagem' | 'confirmacao'
-export type Currency = 'EUR' | 'BRL'
+export type Currency = 'EUR' | 'BRL' | 'USD'
+export type RegionCode = 'BR' | 'PT' | 'EU' | 'US'
+export type Locale = 'pt-BR' | 'pt-PT' | 'en-US' | 'en-GB'
 
 export interface LimitePeriodo {
   diario?: number | null
@@ -15,6 +17,9 @@ export interface UserSettings {
   currency: Currency
   enabled_categories: Tag[]
   limites?: Limites
+  region?: RegionCode
+  persona?: string
+  receipt_photos_enabled?: boolean
 }
 
 export interface Transacao {

@@ -3,7 +3,8 @@
 import { useRef, useState, useEffect } from 'react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts'
 import { formatDayMonth } from '@/lib/utils/date'
-import { formatCurrency } from '@/lib/utils/currency'
+import { formatCurrency, getCurrencySymbol } from '@/lib/utils/currency'
+import { useUserSettingsStore } from '@/stores/userSettingsStore'
 import { CATEGORIES } from '@/lib/categories'
 import type { DayStats } from '@/lib/types'
 
@@ -20,20 +21,21 @@ interface TooltipProps {
   label?: string
 }
 
-function CustomTooltip({ active, payload, label }: TooltipProps) {
+function CustomTooltip({ active, payload, label, currency }: TooltipProps & { currency?: import('@/lib/types').Currency }) {
   if (!active || !payload?.length) return null
 
   const total = payload.reduce((sum, p) => sum + p.value, 0)
+  const curr = currency ?? 'EUR'
 
   return (
     <div className="rounded-lg bg-julius-card border border-julius-border p-3 shadow-lg">
       <p className="text-xs text-julius-muted mb-1">{label}</p>
-      <p className="text-sm font-bold text-julius-text">{formatCurrency(total)}</p>
+      <p className="text-sm font-bold text-julius-text">{formatCurrency(total, curr)}</p>
       {payload
         .filter((p) => p.value > 0)
         .map((p) => (
           <p key={p.name} className="text-xs text-julius-muted">
-            <span style={{ color: p.color }}>●</span> {p.name}: {formatCurrency(p.value)}
+            <span style={{ color: p.color }}>●</span> {p.name}: {formatCurrency(p.value, curr)}
           </p>
         ))}
     </div>
@@ -43,6 +45,8 @@ function CustomTooltip({ active, payload, label }: TooltipProps) {
 export function SpendingChart({ data, isLoading }: SpendingChartProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [containerWidth, setContainerWidth] = useState(320)
+  const currency = useUserSettingsStore((s) => s.currency)
+  const currencySymbol = getCurrencySymbol(currency)
 
   useEffect(() => {
     function measure() {
@@ -89,7 +93,7 @@ export function SpendingChart({ data, isLoading }: SpendingChartProps) {
           <p className="text-xs text-julius-muted">← desliza</p>
         )}
       </div>
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto no-scrollbar">
         <div style={{ width: `${chartWidth}px` }}>
           <BarChart width={chartWidth} height={220} data={chartData}>
             <XAxis
@@ -102,10 +106,10 @@ export function SpendingChart({ data, isLoading }: SpendingChartProps) {
               tick={{ fill: '#94A3B8', fontSize: 11 }}
               axisLine={false}
               tickLine={false}
-              width={40}
-              tickFormatter={(v) => `${v}€`}
+              width={44}
+              tickFormatter={(v) => `${currencySymbol}${v}`}
             />
-            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
+            <Tooltip content={<CustomTooltip currency={currency} />} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
             {CATEGORIES.map((cat, idx) => (
               <Bar
                 key={cat.value}

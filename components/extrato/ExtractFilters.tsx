@@ -1,15 +1,10 @@
 'use client'
 
-import { CATEGORIES } from '@/lib/categories'
+import { CATEGORIES, getCategoryLabel } from '@/lib/categories'
+import { useTranslation } from '@/lib/i18n'
+import { useUserSettingsStore } from '@/stores/userSettingsStore'
+import { getRegionConfig } from '@/lib/config/regions'
 import type { Periodo, Tag } from '@/lib/types'
-
-const PERIODS: { value: Periodo; label: string }[] = [
-  { value: 'hoje', label: 'Hoje' },
-  { value: 'semana', label: 'Essa semana' },
-  { value: 'mes', label: 'Esse mês' },
-  { value: 'trimestre', label: 'Esse trimestre' },
-  { value: 'total', label: 'Tudo' },
-]
 
 interface ExtractFiltersProps {
   periodo: Periodo
@@ -19,6 +14,16 @@ interface ExtractFiltersProps {
 }
 
 export function ExtractFilters({ periodo, tag, onPeriodoChange, onTagChange }: ExtractFiltersProps) {
+  const t = useTranslation()
+  const region = useUserSettingsStore((s) => s.region)
+  const locale = region ? getRegionConfig(region).locale : 'pt-PT'
+  const PERIODS: { value: Periodo; label: string }[] = [
+    { value: 'hoje', label: t.periods.hoje },
+    { value: 'semana', label: t.periods.semana },
+    { value: 'mes', label: t.periods.mes },
+    { value: 'trimestre', label: t.periods.trimestre },
+    { value: 'total', label: t.periods.total },
+  ]
   return (
     <div className="flex flex-1 gap-3 px-4 py-3">
       <div className="relative flex-1">
@@ -46,10 +51,10 @@ export function ExtractFilters({ periodo, tag, onPeriodoChange, onTagChange }: E
           onChange={(e) => onTagChange(e.target.value as Tag | 'all')}
           className="w-full appearance-none bg-julius-card text-julius-text border border-julius-border rounded-xl px-3 py-2.5 text-sm font-medium focus:outline-none focus:border-julius-accent cursor-pointer"
         >
-          <option value="all">Tudo</option>
+          <option value="all">{t.extrato.allCategories}</option>
           {CATEGORIES.map((c) => (
             <option key={c.value} value={c.value}>
-              {c.label}
+              {getCategoryLabel(c.value, locale)}
             </option>
           ))}
         </select>

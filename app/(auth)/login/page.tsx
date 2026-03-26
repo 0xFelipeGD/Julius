@@ -4,10 +4,12 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { useInstallPrompt } from '@/hooks/useInstallPrompt'
+import { useTranslation } from '@/lib/i18n'
 
 type AuthMode = 'login' | 'signup'
 
 export default function LoginPage() {
+  const t = useTranslation()
   const [mode, setMode] = useState<AuthMode>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -37,7 +39,7 @@ export default function LoginPage() {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
       setLoading(false)
       if (error) {
-        setError('Email ou password errados. O Julius está desconfiado...')
+        setError(t.login.wrongCredentials)
       } else {
         router.push('/chat')
         router.refresh()
@@ -50,9 +52,9 @@ export default function LoginPage() {
       })
       setLoading(false)
       if (error) {
-        setError('Não foi possível criar a conta. Tenta outro email.')
+        setError(t.login.signupError)
       } else {
-        setSuccess('Conta criada! Verifica o teu email para confirmar.')
+        setSuccess(t.login.signupSuccess)
       }
     }
   }
@@ -61,10 +63,10 @@ export default function LoginPage() {
     <div className="w-full max-w-sm">
       <div className="mb-10 text-center">
         <div className="mx-auto mb-4 h-20 w-20 overflow-hidden rounded-full ring-4 ring-julius-border animate-pulse">
-          <img src="/julius.png" alt="Julius" className="h-full w-full object-cover" />
+          <img src="/personas/julius.png" alt="Julius" className="h-full w-full object-cover" />
         </div>
         <h1 className="text-3xl font-bold text-julius-text">JULIUS</h1>
-        <p className="mt-1 text-sm text-julius-muted">O teu agente financeiro pessoal</p>
+        <p className="mt-1 text-sm text-julius-muted">{t.login.subtitle}</p>
       </div>
 
       {/* Tabs */}
@@ -76,7 +78,7 @@ export default function LoginPage() {
             mode === 'login' ? 'bg-julius-accent text-white' : 'bg-julius-card text-julius-muted'
           }`}
         >
-          Entrar
+          {t.login.loginTab}
         </button>
         <button
           type="button"
@@ -85,7 +87,7 @@ export default function LoginPage() {
             mode === 'signup' ? 'bg-julius-accent text-white' : 'bg-julius-card text-julius-muted'
           }`}
         >
-          Criar Conta
+          {t.login.signupTab}
         </button>
       </div>
 
@@ -96,14 +98,14 @@ export default function LoginPage() {
             onClick={() => setSuccess('')}
             className="mt-4 text-sm text-julius-accent"
           >
-            Voltar
+            {t.login.back}
           </button>
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
           <input
             type="email"
-            placeholder="O teu email"
+            placeholder={t.login.emailPlaceholder}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
@@ -112,7 +114,7 @@ export default function LoginPage() {
 
           <input
             type="password"
-            placeholder="Password"
+            placeholder={t.login.passwordPlaceholder}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
@@ -134,7 +136,7 @@ export default function LoginPage() {
             disabled={loading || !email || !password}
             className="w-full rounded-xl bg-julius-accent py-3 font-semibold text-white transition-opacity disabled:opacity-50"
           >
-            {loading ? 'A processar...' : mode === 'login' ? 'Entrar' : 'Criar Conta'}
+            {loading ? t.login.processing : mode === 'login' ? t.login.loginButton : t.login.signupButton}
           </button>
         </form>
       )}
@@ -148,7 +150,7 @@ export default function LoginPage() {
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-4 w-4">
               <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
             </svg>
-            Instalar Julius como App
+            {t.login.installButton}
           </button>
         </div>
       )}
@@ -158,7 +160,7 @@ export default function LoginPage() {
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 px-4 pb-8" onClick={() => setShowInstallGuide(false)}>
           <div className="w-full max-w-sm rounded-2xl bg-julius-card border border-julius-border p-5" onClick={(e) => e.stopPropagation()}>
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-base font-semibold text-julius-text">Instalar Julius</h3>
+              <h3 className="text-base font-semibold text-julius-text">{t.install.title}</h3>
               <button onClick={() => setShowInstallGuide(false)} className="text-julius-muted hover:text-julius-text">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="h-5 w-5">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
@@ -168,22 +170,22 @@ export default function LoginPage() {
             <div className="space-y-3 text-sm text-julius-muted">
               <div className="flex items-start gap-3">
                 <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-julius-accent text-[11px] font-bold text-white">1</span>
-                <p>No Chrome, toca nos <strong className="text-julius-text">3 pontos ⋮</strong> no canto superior direito</p>
+                <p>{t.install.chromeStep1}</p>
               </div>
               <div className="flex items-start gap-3">
                 <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-julius-accent text-[11px] font-bold text-white">2</span>
-                <p>Seleciona <strong className="text-julius-text">&quot;Adicionar ao ecrã principal&quot;</strong> ou <strong className="text-julius-text">&quot;Instalar app&quot;</strong></p>
+                <p>{t.install.chromeStep2}</p>
               </div>
               <div className="flex items-start gap-3">
                 <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-julius-accent text-[11px] font-bold text-white">3</span>
-                <p>Confirma e o Julius fica no teu ecrã inicial como uma app</p>
+                <p>{t.install.chromeStep3}</p>
               </div>
             </div>
             <button
               onClick={() => setShowInstallGuide(false)}
               className="mt-5 w-full rounded-xl bg-julius-accent py-2.5 text-sm font-semibold text-white"
             >
-              Entendido
+              {t.install.understood}
             </button>
           </div>
         </div>

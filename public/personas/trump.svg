@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
+  <rect width="120" height="120" rx="60" fill="#c8a04a"/>
+  <circle cx="60" cy="45" r="22" fill="#f5d07a"/>
+  <rect x="28" y="75" width="64" height="40" rx="8" fill="#b8001f"/>
+  <text x="60" y="115" font-family="sans-serif" font-size="9" fill="#f5d07a" text-anchor="middle">TRUMP</text>
+</svg>

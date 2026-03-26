@@ -1,14 +1,7 @@
 'use client'
 
 import type { Periodo } from '@/lib/types'
-
-const PERIODS: { value: Periodo; label: string }[] = [
-  { value: 'hoje', label: 'Hoje' },
-  { value: 'semana', label: 'Essa semana' },
-  { value: 'mes', label: 'Esse mês' },
-  { value: 'trimestre', label: 'Esse trimestre' },
-  { value: 'total', label: 'Tudo' },
-]
+import { useTranslation } from '@/lib/i18n'
 
 interface PeriodFilterProps {
   selected: Periodo
@@ -16,6 +9,14 @@ interface PeriodFilterProps {
 }
 
 export function PeriodFilter({ selected, onChange }: PeriodFilterProps) {
+  const t = useTranslation()
+  const PERIODS: { value: Periodo; label: string }[] = [
+    { value: 'hoje', label: t.periods.hoje },
+    { value: 'semana', label: t.periods.semana },
+    { value: 'mes', label: t.periods.mes },
+    { value: 'trimestre', label: t.periods.trimestre },
+    { value: 'total', label: t.periods.total },
+  ]
   return (
     <div className="relative">
       <select

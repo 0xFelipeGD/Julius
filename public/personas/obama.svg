@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
+  <rect width="120" height="120" rx="60" fill="#003366"/>
+  <circle cx="60" cy="45" r="22" fill="#8ba8cc"/>
+  <rect x="28" y="75" width="64" height="40" rx="8" fill="#c8102e"/>
+  <text x="60" y="115" font-family="sans-serif" font-size="9" fill="#ffffff" text-anchor="middle">OBAMA</text>
+</svg>

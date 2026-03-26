@@ -1,39 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-
-const STEPS = [
-  {
-    icon: '💬',
-    title: 'Fala com o Julius',
-    desc: 'Escreve o que gastaste em linguagem natural. Ex: "Paguei 12€ no almoço" ou "Gastei 45€ no supermercado ontem". O Julius percebe datas passadas e futuras.',
-  },
-  {
-    icon: '📷',
-    title: 'Tira foto ao recibo',
-    desc: 'Usa o ícone da câmara para fotografar qualquer recibo. O Julius lê, extrai o valor e a categoria automaticamente.',
-  },
-  {
-    icon: '✅',
-    title: 'Confirma o registo',
-    desc: 'O Julius mostra o que percebeu — valor, categoria e data. Confirma se estiver certo, ou carrega em "Corrigir" para ajustar antes de guardar.',
-  },
-  {
-    icon: '📊',
-    title: 'Dashboard & Extrato',
-    desc: 'No Dashboard vês gráficos por dia e categoria, totais e médias. Filtra por período (hoje, semana, mês, trimestre) e por categoria. No Extrato podes editar ou apagar qualquer gasto com um toque.',
-  },
-  {
-    icon: '🎯',
-    title: 'Limites de gasto',
-    desc: 'Nas Configurações define limites diários e mensais para cada categoria (ou no geral). O Dashboard mostra barras de progresso em tempo real — ficam vermelhas se ultrapassares o limite.',
-  },
-  {
-    icon: '⚙️',
-    title: 'Personaliza',
-    desc: 'Escolhe a moeda (€ ou R$). Os teus dados ficam seguros na tua conta e podes exportar o extrato em CSV a qualquer momento.',
-  },
-]
+import { useTranslation } from '@/lib/i18n'
 
 interface TutorialModalProps {
   open: boolean
@@ -41,6 +9,12 @@ interface TutorialModalProps {
 }
 
 export function TutorialModal({ open, onClose }: TutorialModalProps) {
+  const t = useTranslation()
+  const STEPS = t.tutorial.steps.map((s, i) => ({
+    icon: ['💬', '📷', '✅', '📊', '🎯', '⚙️'][i] ?? '⚙️',
+    title: s.title,
+    desc: s.body,
+  }))
   const [step, setStep] = useState(0)
 
   if (!open) return null
@@ -93,14 +67,14 @@ export function TutorialModal({ open, onClose }: TutorialModalProps) {
               onClick={() => setStep((s) => s - 1)}
               className="flex-1 rounded-xl bg-julius-bg py-3 text-sm font-medium text-julius-muted"
             >
-              Anterior
+              {t.tutorial.previous}
             </button>
           )}
           <button
             onClick={handleNext}
             className="flex-1 rounded-xl bg-julius-accent py-3 text-sm font-semibold text-white"
           >
-            {isLast ? 'Começar!' : 'Próximo'}
+            {isLast ? t.tutorial.start : t.tutorial.next}
           </button>
         </div>
       </div>

@@ -1,0 +1,1 @@
+export const RECEIPT_UNLOCK_CODE = '364364'

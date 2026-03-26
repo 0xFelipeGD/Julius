@@ -1,6 +1,9 @@
 'use client'
 
 import { useEffect } from 'react'
+import { useTranslation } from '@/lib/i18n'
+import { useUserSettingsStore } from '@/stores/userSettingsStore'
+import { getPersona, getPersonaImage } from '@/lib/prompts'
 
 interface JuliusLightboxProps {
   open: boolean
@@ -8,6 +11,11 @@ interface JuliusLightboxProps {
 }
 
 export function JuliusLightbox({ open, onClose }: JuliusLightboxProps) {
+  const t = useTranslation()
+  const persona = useUserSettingsStore((s) => s.persona)
+  const personaConfig = getPersona(persona)
+  const personaImage = getPersonaImage(personaConfig.id)
+
   useEffect(() => {
     if (!open) return
     function onKey(e: KeyboardEvent) {
@@ -33,14 +41,15 @@ export function JuliusLightbox({ open, onClose }: JuliusLightboxProps) {
         onClick={(e) => e.stopPropagation()}
       >
         <img
-          src="/julius.png"
-          alt="Julius"
+          src={personaImage}
+          alt={personaConfig.name}
+          onError={(e) => { (e.target as HTMLImageElement).src = '/personas/julius.png' }}
           className="h-72 w-72 rounded-3xl object-cover shadow-2xl"
           style={{ boxShadow: '0 0 60px rgba(37,99,235,0.4)' }}
         />
         <div className="mt-4 text-center">
-          <p className="text-julius-text font-semibold text-lg">Julius</p>
-          <p className="text-julius-muted text-sm mt-0.5">O teu agente financeiro pessoal</p>
+          <p className="text-julius-text font-semibold text-lg">{personaConfig.name}</p>
+          <p className="text-julius-muted text-sm mt-0.5">{t.lightbox.subtitle}</p>
         </div>
         <button
           onClick={onClose}

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <rect width="200" height="200" rx="24" fill="#1a2e0f"/>
+  <circle cx="100" cy="78" r="34" fill="#65A30D" opacity="0.9"/>
+  <ellipse cx="100" cy="160" rx="52" ry="36" fill="#65A30D" opacity="0.7"/>
+  <text x="100" y="88" font-family="system-ui,sans-serif" font-size="30" font-weight="bold" fill="white" text-anchor="middle">SM</text>
+</svg>

@@ -1,9 +1,10 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { CATEGORIES, CATEGORY_LABELS } from '@/lib/categories'
+import { CATEGORIES, getCategoryLabel } from '@/lib/categories'
 import { getCalendarDays } from '@/lib/utils/period'
-import type { Transacao, Periodo, Currency } from '@/lib/types'
+import type { Transacao, Periodo, Currency, Locale } from '@/lib/types'
 import { formatCurrency } from '@/lib/utils/currency'
+import type { Translations } from '@/lib/i18n/types'
 
 interface ReportData {
   transactions: Transacao[]
@@ -12,18 +13,16 @@ interface ReportData {
   currency: Currency
   total: number
   average: number
-}
-
-const periodoLabels: Record<Periodo, string> = {
-  hoje: 'Hoje',
-  semana: 'Semana',
-  mes: 'Mês',
-  trimestre: 'Trimestre',
-  total: 'Ano',
+  locale?: Locale
+  translations?: Translations
 }
 
 export function generateReport(data: ReportData): jsPDF {
-  const { transactions, periodo, year, currency, total, average } = data
+  const { transactions, periodo, year, currency, total, average, locale = 'pt-PT', translations } = data
+  const tr = translations
+  const periodoLabels: Record<Periodo, string> = tr?.pdf.periods ?? {
+    hoje: 'Hoje', semana: 'Semana', mes: 'Mês', trimestre: 'Trimestre', total: 'Ano',
+  }
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
 
   const PAGE_W = 210
@@ -51,9 +50,9 @@ export function generateReport(data: ReportData): jsPDF {
   doc.setFontSize(10)
   doc.setTextColor(...TEXT_MUTED)
   doc.setFont('helvetica', 'normal')
-  doc.text('Relatório Financeiro', MARGIN, y + 7)
+  doc.text(tr?.pdf.subtitle ?? 'Relatório Financeiro', MARGIN, y + 7)
   doc.text(
-    `${periodoLabels[periodo]}${periodo === 'total' ? ` ${year}` : ''} · Gerado a ${new Date().toLocaleDateString('pt-PT')}`,
+    `${periodoLabels[periodo]}${periodo === 'total' ? ` ${year}` : ''} · ${tr?.pdf.generatedAt ?? 'Gerado a'} ${new Date().toLocaleDateString(locale)}`,
     MARGIN,
     y + 13
   )
@@ -62,9 +61,9 @@ export function generateReport(data: ReportData): jsPDF {
   y = 50
   const cardW = (CONTENT_W - 8) / 3
   const cards = [
-    { label: 'Total', value: formatCurrency(total, currency) },
-    { label: 'Média Diária', value: formatCurrency(average, currency) },
-    { label: 'Transações', value: String(transactions.length) },
+    { label: tr?.pdf.total ?? 'Total', value: formatCurrency(total, currency, locale) },
+    { label: tr?.pdf.dailyAverage ?? 'Média Diária', value: formatCurrency(average, currency, locale) },
+    { label: tr?.pdf.transactions ?? 'Transações', value: String(transactions.length) },
   ]
 
   cards.forEach((card, i) => {
@@ -86,7 +85,7 @@ export function generateReport(data: ReportData): jsPDF {
   doc.setFontSize(10)
   doc.setTextColor(...TEXT_WHITE)
   doc.setFont('helvetica', 'bold')
-  doc.text('Por Categoria', MARGIN, y)
+  doc.text(tr?.pdf.byCategory ?? 'Por Categoria', MARGIN, y)
   y += 5
 
   // Group transactions by category
@@ -115,7 +114,7 @@ export function generateReport(data: ReportData): jsPDF {
     // Label (no emoji — jsPDF doesn't support them)
     doc.setFontSize(8)
     doc.setTextColor(...TEXT_MUTED)
-    doc.text(cat.label, MARGIN, y + 3.5)
+    doc.text(getCategoryLabel(cat.value, locale), MARGIN, y + 3.5)
 
     // Bar
     doc.setFillColor(r, g, b)
@@ -136,14 +135,14 @@ export function generateReport(data: ReportData): jsPDF {
   y += 5
   autoTable(doc, {
     startY: y,
-    head: [['Dia', 'Descrição', 'Categoria', 'Valor']],
+    head: [[tr?.extrato.dateLabel ?? 'Dia', tr?.extrato.descriptionLabel ?? 'Descrição', tr?.extrato.categoryLabel ?? 'Categoria', tr?.pdf.total ?? 'Valor']],
     body: transactions.map((t) => {
       const [yr, mo, day] = t.dia.split('-')
       return [
         `${day}/${mo}/${yr}`,
         t.descricao,
-        CATEGORY_LABELS[t.tag] ?? t.tag,
-        formatCurrency(Number(t.valor), currency),
+        getCategoryLabel(t.tag, locale),
+        formatCurrency(Number(t.valor), currency, locale),
       ]
     }),
     styles: {
@@ -175,7 +174,7 @@ export function generateReport(data: ReportData): jsPDF {
     doc.rect(0, 285, PAGE_W, 12, 'F')
     doc.setFontSize(7)
     doc.setTextColor(...TEXT_MUTED)
-    doc.text(`Gerado pelo Julius · ${new Date().toLocaleDateString('pt-PT')}`, MARGIN, 291)
+    doc.text(`${tr?.pdf.footer ?? 'Gerado pelo Julius'} · ${new Date().toLocaleDateString(locale)}`, MARGIN, 291)
     doc.text(`${i}/${pageCount}`, PAGE_W - MARGIN, 291, { align: 'right' })
   }
 

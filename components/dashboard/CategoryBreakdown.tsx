@@ -1,9 +1,11 @@
 'use client'
 
 import { PieChart, Pie, Cell } from 'recharts'
-import { CATEGORIES } from '@/lib/categories'
+import { CATEGORIES, getCategoryLabel } from '@/lib/categories'
 import { formatCurrency } from '@/lib/utils/currency'
 import { useUserSettingsStore } from '@/stores/userSettingsStore'
+import { useTranslation } from '@/lib/i18n'
+import { getRegionConfig } from '@/lib/config/regions'
 import type { DayStats } from '@/lib/types'
 
 interface CategoryBreakdownProps {
@@ -12,12 +14,15 @@ interface CategoryBreakdownProps {
 }
 
 export function CategoryBreakdown({ data, isLoading }: CategoryBreakdownProps) {
+  const t = useTranslation()
   const currency = useUserSettingsStore((s) => s.currency)
+  const region = useUserSettingsStore((s) => s.region)
+  const locale = region ? getRegionConfig(region).locale : 'pt-PT'
 
   if (isLoading) {
     return (
       <div className="mx-4 flex h-[140px] items-center justify-center rounded-xl bg-julius-card">
-        <p className="text-sm text-julius-muted">Julius está a calcular...</p>
+        <p className="text-sm text-julius-muted">{t.dashboard.calculating}</p>
       </div>
     )
   }
@@ -33,14 +38,14 @@ export function CategoryBreakdown({ data, isLoading }: CategoryBreakdownProps) {
   if (total === 0) return null
 
   const pieData = CATEGORIES
-    .map((cat) => ({ key: cat.value, label: cat.label, amount: totals[cat.value] ?? 0, color: cat.color }))
+    .map((cat) => ({ key: cat.value, label: getCategoryLabel(cat.value, locale), amount: totals[cat.value] ?? 0, color: cat.color }))
     .filter((d) => d.amount > 0)
     .sort((a, b) => b.amount - a.amount)
 
   return (
     <div className="mx-4 rounded-xl bg-julius-card p-4">
       <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-julius-muted">
-        Por categoria
+        {t.dashboard.byCategory}
       </p>
       <div className="flex items-center gap-4">
         {/* Donut */}

@@ -4,7 +4,9 @@ import { useState, useRef } from 'react'
 import { formatCurrency } from '@/lib/utils/currency'
 import { formatTime } from '@/lib/utils/date'
 import { useUserSettingsStore } from '@/stores/userSettingsStore'
-import { CATEGORY_LABELS, CATEGORY_EMOJIS, CATEGORY_BG_MUTED, CATEGORY_TEXT } from '@/lib/categories'
+import { getCategoryLabel, CATEGORY_EMOJIS, CATEGORY_BG_MUTED, CATEGORY_TEXT } from '@/lib/categories'
+import { useTranslation } from '@/lib/i18n'
+import { getRegionConfig } from '@/lib/config/regions'
 import type { Transacao } from '@/lib/types'
 
 interface TransactionItemProps {
@@ -14,10 +16,13 @@ interface TransactionItemProps {
 }
 
 export function TransactionItem({ transaction, onDelete, onEdit }: TransactionItemProps) {
+  const t = useTranslation()
   const [showDelete, setShowDelete] = useState(false)
   const [startX, setStartX] = useState(0)
   const swipedRef = useRef(false)
   const currency = useUserSettingsStore((s) => s.currency)
+  const region = useUserSettingsStore((s) => s.region)
+  const locale = region ? getRegionConfig(region).locale : 'pt-PT'
 
   function handleTouchStart(e: React.TouchEvent) {
     setStartX(e.touches[0].clientX)
@@ -46,7 +51,7 @@ export function TransactionItem({ transaction, onDelete, onEdit }: TransactionIt
   }
 
   function handleDelete() {
-    if (confirm('Tens a certeza? O Julius não vai gostar de perder registos.')) {
+    if (confirm(t.extrato.deleteConfirm)) {
       onDelete(transaction.id)
     }
   }
@@ -66,7 +71,7 @@ export function TransactionItem({ transaction, onDelete, onEdit }: TransactionIt
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-julius-text truncate">{transaction.descricao}</p>
-          <p className={`text-xs ${CATEGORY_TEXT[transaction.tag]}`}>{CATEGORY_LABELS[transaction.tag]} · {formatTime(transaction.hora)}</p>
+          <p className={`text-xs ${CATEGORY_TEXT[transaction.tag]}`}>{getCategoryLabel(transaction.tag, locale)} · {formatTime(transaction.hora)}</p>
         </div>
         <p className="text-sm font-semibold text-julius-text shrink-0">
           {formatCurrency(transaction.valor, currency)}
@@ -78,7 +83,7 @@ export function TransactionItem({ transaction, onDelete, onEdit }: TransactionIt
           onClick={handleDelete}
           className="absolute right-0 top-0 flex h-full w-20 items-center justify-center bg-julius-danger text-white text-sm font-medium"
         >
-          Apagar
+          {t.extrato.deleteLabel}
         </button>
       )}
     </div>

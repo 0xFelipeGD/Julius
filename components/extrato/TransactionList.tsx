@@ -3,6 +3,7 @@
 import { TransactionItem } from './TransactionItem'
 import { formatDate } from '@/lib/utils/date'
 import { formatCurrency } from '@/lib/utils/currency'
+import { useUserSettingsStore } from '@/stores/userSettingsStore'
 import type { Transacao } from '@/lib/types'
 
 interface TransactionListProps {
@@ -23,6 +24,7 @@ function groupByDay(transactions: Transacao[]): Map<string, Transacao[]> {
 }
 
 export function TransactionList({ transactions, isLoading, onDelete, onEdit }: TransactionListProps) {
+  const currency = useUserSettingsStore((s) => s.currency)
   if (isLoading) {
     return (
       <div className="space-y-3 px-4 py-4">
@@ -63,7 +65,7 @@ export function TransactionList({ transactions, isLoading, onDelete, onEdit }: T
           <div key={dia}>
             <div className="flex items-center justify-between px-4 py-2 bg-julius-bg/50">
               <p className="text-xs font-medium text-julius-muted">{formatDate(dia)}</p>
-              <p className="text-xs font-medium text-julius-muted">{formatCurrency(dayTotal)}</p>
+              <p className="text-xs font-medium text-julius-muted">{formatCurrency(dayTotal, currency)}</p>
             </div>
             {items.map((t) => (
               <TransactionItem key={t.id} transaction={t} onDelete={onDelete} onEdit={onEdit} />

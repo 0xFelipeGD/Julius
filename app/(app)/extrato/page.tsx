@@ -1,21 +1,21 @@
 'use client'
 
-import { useRef, useEffect, useState } from 'react'
+import { useState, useMemo } from 'react'
 import { ExtractFilters } from '@/components/extrato/ExtractFilters'
 import { TransactionList } from '@/components/extrato/TransactionList'
 import { EditTransactionModal } from '@/components/extrato/EditTransactionModal'
+import { SearchBar } from '@/components/extrato/SearchBar'
 import { useTransactions, useDeleteTransaction, useUpdateTransaction } from '@/hooks/useTransactions'
 import { CATEGORY_LABELS } from '@/lib/categories'
 import type { Periodo, Tag, Transacao } from '@/lib/types'
 import { generateReport } from '@/lib/pdf/generateReport'
 import { getCalendarDays } from '@/lib/utils/period'
 import { useUserSettingsStore } from '@/stores/userSettingsStore'
+import { useAppStore } from '@/stores/appStore'
+import { getCurrencySymbol } from '@/lib/utils/currency'
 
-const CURRENT_YEAR = new Date().getFullYear()
-const YEARS = Array.from({ length: CURRENT_YEAR - 2024 }, (_, i) => 2025 + i)
-
-function exportCSV(transactions: Transacao[], periodo: Periodo) {
-  const header = 'Dia,Descrição,Valor (€),Categoria'
+function exportCSV(transactions: Transacao[], periodo: Periodo, currencySymbol: string) {
+  const header = `Dia,Descrição,Valor (${currencySymbol}),Categoria`
   const rows = transactions.map((t) => {
     const [year, month, day] = t.dia.split('-')
     const dia = `${day}/${month}/${year}`
@@ -37,25 +37,31 @@ function exportCSV(transactions: Transacao[], periodo: Periodo) {
 export default function ExtratoPage() {
   const [periodo, setPeriodo] = useState<Periodo>('mes')
   const [tag, setTag] = useState<Tag | 'all'>('all')
-  const [year, setYear] = useState(CURRENT_YEAR)
+  const [search, setSearch] = useState('')
   const [editingTransaction, setEditingTransaction] = useState<Transacao | null>(null)
-  const yearScrollRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const el = yearScrollRef.current?.querySelector('[data-active="true"]') as HTMLElement | null
-    el?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
-  }, [year])
+  const year = useAppStore((s) => s.selectedYear)
 
   const { data: transactions, isLoading } = useTransactions(periodo, tag === 'all' ? undefined : tag, year)
   const deleteTransaction = useDeleteTransaction()
   const updateTransaction = useUpdateTransaction()
   const currency = useUserSettingsStore((s) => s.currency)
+  const currencySymbol = getCurrencySymbol(currency)
+
+  // Apply search filter on top of fetched transactions
+  const filteredTransactions = useMemo(() => {
+    if (!search.trim()) return transactions ?? []
+    const q = search.toLowerCase()
+    return (transactions ?? []).filter((t) =>
+      t.descricao.toLowerCase().includes(q) ||
+      (CATEGORY_LABELS[t.tag] ?? t.tag).toLowerCase().includes(q)
+    )
+  }, [transactions, search])
 
   function handleExportPDF() {
-    if (!transactions?.length) return
-    const total = transactions.reduce((sum, t) => sum + Number(t.valor), 0)
+    if (!filteredTransactions.length) return
+    const total = filteredTransactions.reduce((sum, t) => sum + Number(t.valor), 0)
     const average = total / getCalendarDays(periodo, year)
-    const doc = generateReport({ transactions, periodo, year, currency, total, average })
+    const doc = generateReport({ transactions: filteredTransactions, periodo, year, currency, total, average })
     doc.save(`julius-relatorio-${periodo}-${new Date().toISOString().split('T')[0]}.pdf`)
   }
 
@@ -67,27 +73,6 @@ export default function ExtratoPage() {
 
   return (
     <div>
-      {/* Selector de ano */}
-      <div
-        ref={yearScrollRef}
-        className="flex gap-2 overflow-x-auto px-4 pt-3 pb-1 no-scrollbar"
-      >
-        {YEARS.map((y) => (
-          <button
-            key={y}
-            data-active={y === year ? 'true' : 'false'}
-            onClick={() => setYear(y)}
-            className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
-              y === year
-                ? 'bg-julius-accent text-white'
-                : 'border border-julius-border bg-julius-card text-julius-muted'
-            }`}
-          >
-            {y}
-          </button>
-        ))}
-      </div>
-
       <div className="flex items-center justify-between pr-4">
         <ExtractFilters
           periodo={periodo}
@@ -97,8 +82,8 @@ export default function ExtratoPage() {
         />
         <div className="flex items-center gap-2">
           <button
-            onClick={() => exportCSV(transactions ?? [], periodo)}
-            disabled={!transactions?.length}
+            onClick={() => exportCSV(filteredTransactions, periodo, currencySymbol)}
+            disabled={!filteredTransactions.length}
             title="Exportar CSV"
             className="flex shrink-0 items-center gap-1.5 rounded-xl bg-julius-card border border-julius-border px-3 py-2.5 text-sm text-julius-muted transition-colors hover:text-julius-text disabled:opacity-40"
           >
@@ -109,7 +94,7 @@ export default function ExtratoPage() {
           </button>
           <button
             onClick={handleExportPDF}
-            disabled={!transactions?.length}
+            disabled={!filteredTransactions.length}
             title="Exportar PDF"
             className="flex shrink-0 items-center gap-1.5 rounded-xl bg-julius-card border border-julius-border px-3 py-2.5 text-sm text-julius-muted transition-colors hover:text-julius-text disabled:opacity-40"
           >
@@ -121,8 +106,10 @@ export default function ExtratoPage() {
         </div>
       </div>
 
+      <SearchBar value={search} onChange={setSearch} />
+
       <TransactionList
-        transactions={transactions ?? []}
+        transactions={filteredTransactions}
         isLoading={isLoading}
         onDelete={handleDelete}
         onEdit={handleEdit}

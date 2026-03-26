@@ -1,10 +1,12 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useTranslation } from '@/lib/i18n'
 
 const IOS_HINT_KEY = 'julius_ios_hint_dismissed'
 
 export function IOSInstallHint() {
+  const t = useTranslation()
   const [show, setShow] = useState(false)
 
   useEffect(() => {
@@ -26,12 +28,10 @@ export function IOSInstallHint() {
 
   return (
     <div className="fixed bottom-20 left-4 right-4 z-50 rounded-xl border border-julius-border bg-julius-card p-4 shadow-lg">
-      <p className="text-sm font-medium text-julius-text mb-1">Instala o Julius</p>
-      <p className="text-xs text-julius-muted">
-        Toca em <strong>Partilhar</strong> e depois <strong>Adicionar ao Ecrã de Início</strong>
-      </p>
+      <p className="text-sm font-medium text-julius-text mb-1">{t.install.title}</p>
+      <p className="text-xs text-julius-muted">{t.install.iosHint}</p>
       <button onClick={dismiss} className="mt-2 text-xs text-julius-accent">
-        Dispensar
+        {t.install.dismiss}
       </button>
     </div>
   )

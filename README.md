@@ -1,80 +1,71 @@
-# Julius — Agente Financeiro Pessoal
+# Julius — Personal Finance Assistant
 
-Julius é uma PWA mobile-first para controlo de gastos pessoais. Fala com o Julius em linguagem natural, tira fotos a recibos, e ele regista tudo automaticamente com personalidade dramática.
+Julius is a mobile-first PWA for personal expense tracking. Talk to Julius in natural language, snap photos of receipts, and choose a personality that matches your vibe.
 
-## Stack
+## Regions & Languages
 
-| Camada | Tecnologia |
-|---|---|
-| Frontend | Next.js 14 (App Router) + TypeScript + Tailwind CSS v4 |
-| Backend | Supabase (Auth, PostgreSQL, Edge Functions) |
-| IA | OpenAI GPT-4o-mini (texto) / GPT-4o (imagens/recibos) |
-| Estado | Zustand + TanStack React Query |
-| Gráficos | Recharts |
+| Region | Language | Currency | Personas |
+|---|---|---|---|
+| 🇧🇷 Brazil | Brazilian Portuguese | BRL (R$) | Julius, Dona Herminia, Seu Madruga |
+| 🇵🇹 Portugal | European Portuguese | EUR (€) | Julius, Tia Encarnação, Fernando, Zé Povinho |
+| 🇪🇺 Europe | English (GB) | EUR (€) | Julius, Mrs. Thatcher, Nonna Maria, Hans |
+| 🇺🇸 United States | English (US) | USD ($) | Julius, Grandma Rose, Mr. Pennypinch, Uncle Dave |
 
-## Funcionalidades
+First login shows a region selector. Region (and with it the language and currency) can be changed anytime in Settings.
 
-- **Chat com IA** — descreve gastos em linguagem natural com datas relativas ("ontem", "na sexta", "dia 1 de março"); o Julius interpreta e cria o registo
-- **Leitura de recibos** — tira foto a qualquer recibo, o Julius extrai valor, categoria e data automaticamente
-- **Dashboard** — gráfico de barras empilhadas por categoria/dia (scrollável), donut chart por categoria, totais e médias; filtra por período, categoria e ano
-- **Limites de gasto** — define limites diários e mensais por categoria (ou no geral); barras de progresso no dashboard ficam vermelhas ao ultrapassar
-- **Extrato** — lista filtrável por período, categoria e ano; toque para editar, swipe para apagar, exportação CSV
-- **Edição de transações** — edita valor, categoria, descrição e data de qualquer registo directamente no extrato
-- **Configurações por utilizador** — moeda (€ ou R$), limites por categoria; persistidas no Supabase
+## Features
+
+- **Chat with AI** — describe expenses in natural language with relative dates; Julius interprets and creates the record
+- **Receipt photos** — snap any receipt; Julius extracts amount, category, and date automatically (unlock via code in Settings)
+- **Dashboard** — stacked bar chart by category/day, donut breakdown, totals and averages; filter by period and category
+- **Spending limits** — daily and monthly limits per category or globally; progress bars turn red when exceeded
+- **Statement** — filterable + searchable list; tap to edit, swipe to delete, export to CSV or PDF
+- **Personas** — 13 personalities across 4 regions, each with unique confirm messages and chat style
+- **Year selector** — in Settings, switches the active year across dashboard and statement
+
+## Tech Stack
+
+| Layer | Technology | Version |
+|---|---|---|
+| Frontend | Next.js (App Router) | 16.1.6 |
+| UI | React + TypeScript + Tailwind CSS | 19.2.4 / 5.9.3 / 4.2.1 |
+| State | Zustand + TanStack React Query | 5.0.11 / 5.90.21 |
+| Backend | Supabase (Auth, PostgreSQL, Edge Functions) | 2.98.0 |
+| AI | OpenAI GPT-4o-mini (text) / GPT-4o (images) | — |
+| Charts | Recharts | 3.7.0 |
+| PDF | jsPDF + jspdf-autotable | 4.2.1 / 5.0.7 |
+| PWA | @ducanh2912/next-pwa | 10.2.9 |
+| Testing | Vitest | 4.1.0 |
 
 ## Setup
 
-### 1. Variáveis de ambiente
+### 1. Environment variables
 
-Cria `.env.local` na raiz:
+Create `.env.local` in the project root:
 
 ```
 NEXT_PUBLIC_SUPABASE_URL=https://<project>.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon-key>
 ```
 
-Na Edge Function (Supabase dashboard → Settings → Edge Functions → Secrets):
+In Supabase dashboard → Settings → Edge Functions → Secrets:
+
 ```
 OPENAI_API_KEY=sk-...
 ```
 
-### 2. Base de dados
+### 2. Database
 
-Corre as migrações no Supabase SQL Editor ou via CLI:
-
-```sql
--- Tabela de transações
-CREATE TABLE transacoes (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-  valor NUMERIC(10,2) NOT NULL,
-  tag TEXT NOT NULL,
-  descricao TEXT NOT NULL,
-  dia DATE NOT NULL,
-  hora TEXT NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-ALTER TABLE transacoes ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users own transacoes" ON transacoes FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
-
--- Histórico do chat
-CREATE TABLE chat_history (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-  role TEXT NOT NULL,
-  content TEXT NOT NULL,
-  tipo TEXT NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-ALTER TABLE chat_history ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users own chat_history" ON chat_history FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
-```
-
-Corre também todas as migrações em `supabase/migrations/` pela ordem:
+Apply all migrations in order:
 
 ```bash
 supabase db push
 ```
+
+This creates:
+- `transacoes` — expense records (RLS enforced)
+- `chat_history` — chat messages (RLS enforced)
+- `user_settings` — per-user settings: currency, limits, region, persona, receipt unlock
 
 ### 3. Edge Functions
 
@@ -83,75 +74,126 @@ supabase functions deploy julius-chat --no-verify-jwt
 supabase functions deploy delete-account
 ```
 
-> A flag `--no-verify-jwt` é necessária na `julius-chat` para evitar erros 401 do gateway do Supabase. A segurança dos dados é garantida por RLS nas tabelas.
+> `--no-verify-jwt` is required on `julius-chat` to avoid 401 gateway errors. Data security is enforced by RLS on all tables.
 
-### 4. Instalar e correr
+### 4. Install and run
 
 ```bash
 npm install
 npm run dev
 ```
 
-## Estrutura do projeto
+### 5. Regenerate PWA icons (optional)
+
+If you change `public/favicon.svg`:
+
+```bash
+node scripts/generate-icons.js
+```
+
+Outputs PNG icons at all sizes to `public/icons/`.
+
+## Project Structure
 
 ```
 app/
   (app)/
-    chat/          # Chat com Julius (texto + foto)
-    dashboard/     # Gráficos, totais, limites de gasto
-    extrato/       # Lista de transações (editar, apagar, exportar CSV)
-    settings/      # Moeda, limites por categoria, conta
+    chat/          # Chat with Julius (text + receipt photo)
+    dashboard/     # Charts, totals, spending limits
+    extrato/       # Statement (edit, delete, search, export)
+    settings/      # Region, persona, year, limits, receipt unlock, account
   (auth)/
-    login/         # Autenticação Supabase
+    login/         # Supabase auth
 components/
   chat/            # ChatBubble, ChatInput, TransactionConfirm, CameraCapture
   dashboard/       # StatsCards, SpendingChart, CategoryBreakdown, BudgetProgress, PeriodFilter
-  extrato/         # TransactionList, TransactionItem, ExtractFilters, EditTransactionModal
-  AppShell.tsx     # Layout principal (header + nav com pill indicator)
-  JuliusLightbox.tsx  # Modal da foto do Julius
-  TutorialModal.tsx   # Tutorial de onboarding (6 passos)
+  extrato/         # TransactionList, TransactionItem, ExtractFilters, EditTransactionModal, SearchBar
+  settings/        # RegionSelector, PersonaSelector, LimitsSection, AccountSection, HelpSection, ReceiptUnlock
+  AppShell.tsx     # Main layout (header + bottom nav)
+  RegionGate.tsx   # Blocks the app until region is chosen on first login
+  JuliusLightbox.tsx
+  TutorialModal.tsx
+  IOSInstallHint.tsx
 hooks/
-  useJuliusChat.ts    # Lógica do chat, confirmação, persistência localStorage
-  useTransactions.ts  # Query de transações com filtros
-  useStats.ts         # Query de estatísticas agrupadas por dia
-  useUserSettings.ts  # Sync de configurações com Supabase
+  useJuliusChat.ts     # Chat logic, transaction confirmation, Zustand-persisted history
+  useTransactions.ts   # Transactions query with filters
+  useStats.ts          # Stats grouped by day (zero-spend days filled)
+  useUserSettings.ts   # Load/save: region, persona, limits, receipt unlock
 lib/
-  categories.ts    # FONTE ÚNICA de categorias (editar aqui para adicionar/remover)
-  types/           # Tipos TypeScript (Tag, Periodo, Limites, etc.)
-  utils/           # formatCurrency, formatDate, formatTime
-  supabase/        # Client, server, middleware
+  categories.ts        # Single source of truth for categories
+  config/
+    regions.ts         # Region → locale/currency mapping (BR, PT, EU, US)
+    features.ts        # Feature flags (RECEIPT_UNLOCK_CODE)
+  i18n/
+    types.ts           # Translations interface (~130 keys)
+    index.ts           # useTranslation() hook
+    locales/           # pt-PT.ts, pt-BR.ts, en-GB.ts, en-US.ts
+  prompts/
+    index.ts           # Persona registry: getPersona(), getPersonasForRegion()
+    personas/          # 12 persona files — metadata + confirm messages (no system prompts)
+  types/index.ts       # Tag, Periodo, Currency, RegionCode, Locale, UserSettings, …
+  utils/               # formatCurrency, formatDate, formatTime
+  pdf/
+    generateReport.ts  # Locale-aware PDF export
 stores/
-  authStore.ts           # Estado de autenticação (Zustand)
-  userSettingsStore.ts   # Moeda + limites por categoria (Zustand)
+  appStore.ts          # chatMessages (survives tab navigation), selectedYear
+  userSettingsStore.ts # region, currency, persona, limits, receiptPhotosEnabled
+scripts/
+  generate-icons.js    # Generates PWA icon PNGs from favicon.svg via sharp
+__tests__/
+  lib/
+    categories.test.ts
+    utils/
+      currency.test.ts
+      date.test.ts
+      period.test.ts
 supabase/
   functions/
-    julius-chat/    # Edge Function: prompt do Julius + OpenAI (--no-verify-jwt)
-    delete-account/ # Edge Function: eliminar conta
-  migrations/       # SQL migrations (aplicar em ordem com supabase db push)
+    julius-chat/
+      index.ts         # Edge Function: receives region + persona_id, calls OpenAI
+      prompts.ts       # All 13 persona system prompts (server-side only, not bundled)
+    delete-account/
+  migrations/
+docs/
+  PLAN_v1.3.md
+  relatorios/          # Audit and quality reports
 ```
 
-## Adicionar uma categoria nova
+## How to add a new persona
 
-1. `lib/categories.ts` — adicionar ao array `CATEGORIES`
-2. `lib/types/index.ts` — adicionar ao tipo `Tag`
-3. `supabase/functions/julius-chat/index.ts` — adicionar às `TAGS DISPONÍVEIS` no prompt
+1. Create `lib/prompts/personas/<name>.ts` — export a `PersonaConfig` with `id`, `name`, `tagline`, `sampleQuote`, `availableRegions`, `getConfirmMessages()`, and `getEmptyGreeting()`
+2. Register it in `lib/prompts/index.ts` (import + add to `PERSONAS`)
+3. Add the full system prompt to `supabase/functions/julius-chat/prompts.ts`
 
-## Filtros de período
+## How to add a new region
 
-| Opção | Intervalo |
-|---|---|
-| Hoje | Dia actual |
-| Essa semana | Domingo a sábado da semana corrente |
-| Esse mês | 1º ao último dia do mês corrente |
-| Esse trimestre | Trimestre corrente (Jan–Mar, Abr–Jun, Jul–Set, Out–Dez) |
-| Tudo | 1 Jan a 31 Dez do ano seleccionado |
+1. Add the region code to `RegionCode` in `lib/types/index.ts`
+2. Add the config entry to `REGIONS` in `lib/config/regions.ts`
+3. Create `lib/i18n/locales/<locale>.ts` implementing the `Translations` interface
+4. Register it in `lib/i18n/index.ts`
 
-## Personalidade do Julius
+## How to add a new category
 
-O Julius tem a personalidade do "pai do Chris Rock em Todo Mundo Odeia o Chris" — dramático, cómico, obcecado com dinheiro. O prompt completo está em `supabase/functions/julius-chat/index.ts` na constante `JULIUS_SYSTEM_PROMPT`.
+1. `lib/categories.ts` — add to `CATEGORIES` with `labels` for all 4 locales
+2. `lib/types/index.ts` — add to the `Tag` union type
+3. `supabase/functions/julius-chat/prompts.ts` — add to the tags list in each persona prompt
 
-## Limitações conhecidas
+## How to change the receipt unlock code
 
-- Só suporta dados a partir de 2025-01-01 (Julius rejeita datas anteriores)
-- Máximo de 3 anos no futuro para registos
-- Histórico do chat carregado: últimas 50 mensagens
+Edit `RECEIPT_UNLOCK_CODE` in `lib/config/features.ts`. Users who already unlocked are unaffected (stored per-user in `user_settings`).
+
+## Tests
+
+```bash
+npm test            # run once
+npm run test:watch  # watch mode
+```
+
+Covers `formatCurrency`, `formatDate`, `formatTime`, category helpers, and period utilities.
+
+## Known limitations
+
+- Data accepted from 2025-01-01 onwards (Julius rejects earlier dates)
+- Maximum 3 years into the future for records
+- Chat history loads last 50 messages
+- PWA manifest is static — `lang` attribute is updated client-side after region loads

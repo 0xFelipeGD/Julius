@@ -3,6 +3,7 @@
 import { formatCurrency } from '@/lib/utils/currency'
 import { useUserSettingsStore } from '@/stores/userSettingsStore'
 import { useStats } from '@/hooks/useStats'
+import { useTranslation } from '@/lib/i18n'
 import type { Tag } from '@/lib/types'
 
 interface BudgetProgressProps {
@@ -23,6 +24,7 @@ function ProgressBar({ value, max, color }: { value: number; max: number | null 
 }
 
 export function BudgetProgress({ tag }: BudgetProgressProps) {
+  const t = useTranslation()
   const { limites, currency } = useUserSettingsStore()
   const tagParam = tag === 'all' ? undefined : tag
   const { data: todayData } = useStats('hoje', tagParam)
@@ -37,12 +39,12 @@ export function BudgetProgress({ tag }: BudgetProgressProps) {
 
   return (
     <div className="mx-4 rounded-xl bg-julius-card p-4 space-y-4">
-      <p className="text-xs font-semibold uppercase tracking-wider text-julius-muted">Limites</p>
+      <p className="text-xs font-semibold uppercase tracking-wider text-julius-muted">{t.dashboard.limits}</p>
 
       {limite?.diario != null && (
         <div>
           <div className="mb-1.5 flex items-center justify-between">
-            <span className="text-xs text-julius-muted">Hoje</span>
+            <span className="text-xs text-julius-muted">{t.dashboard.today}</span>
             <span className="text-xs font-medium text-julius-text">
               {formatCurrency(todayTotal, currency)}{' '}
               <span className="text-julius-muted">/ {formatCurrency(limite.diario, currency)}</span>
@@ -51,11 +53,11 @@ export function BudgetProgress({ tag }: BudgetProgressProps) {
           <ProgressBar value={todayTotal} max={limite.diario} color="#2563EB" />
           {todayTotal > limite.diario ? (
             <p className="mt-1 text-xs text-julius-danger">
-              +{formatCurrency(todayTotal - limite.diario, currency)} acima do limite
+              +{formatCurrency(todayTotal - limite.diario, currency)} {t.dashboard.above}
             </p>
           ) : (
             <p className="mt-1 text-xs text-julius-muted">
-              Pode gastar mais {formatCurrency(limite.diario - todayTotal, currency)} hoje
+              {t.dashboard.canSpend} {formatCurrency(limite.diario - todayTotal, currency)} {t.dashboard.today.toLowerCase()}
             </p>
           )}
         </div>
@@ -64,7 +66,7 @@ export function BudgetProgress({ tag }: BudgetProgressProps) {
       {limite?.mensal != null && (
         <div>
           <div className="mb-1.5 flex items-center justify-between">
-            <span className="text-xs text-julius-muted">Este mês</span>
+            <span className="text-xs text-julius-muted">{t.dashboard.thisMonth}</span>
             <span className="text-xs font-medium text-julius-text">
               {formatCurrency(monthTotal, currency)}{' '}
               <span className="text-julius-muted">/ {formatCurrency(limite.mensal, currency)}</span>
@@ -73,11 +75,11 @@ export function BudgetProgress({ tag }: BudgetProgressProps) {
           <ProgressBar value={monthTotal} max={limite.mensal} color="#16A34A" />
           {monthTotal > limite.mensal ? (
             <p className="mt-1 text-xs text-julius-danger">
-              +{formatCurrency(monthTotal - limite.mensal, currency)} acima do limite
+              +{formatCurrency(monthTotal - limite.mensal, currency)} {t.dashboard.above}
             </p>
           ) : (
             <p className="mt-1 text-xs text-julius-muted">
-              Pode gastar mais {formatCurrency(limite.mensal - monthTotal, currency)} este mês
+              {t.dashboard.canSpend} {formatCurrency(limite.mensal - monthTotal, currency)} {t.dashboard.thisMonth.toLowerCase()}
             </p>
           )}
         </div>

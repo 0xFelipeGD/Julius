@@ -1,395 +1,109 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
-import { useUserSettings } from '@/hooks/useUserSettings'
-import { CATEGORIES } from '@/lib/categories'
-import { formatCurrency } from '@/lib/utils/currency'
-import { TutorialModal } from '@/components/TutorialModal'
-import { useInstallPrompt } from '@/hooks/useInstallPrompt'
-import type { Currency, Tag, Limites, LimitePeriodo } from '@/lib/types'
+import Link from 'next/link'
+import { HelpSection } from '@/components/settings/HelpSection'
+import { AccountSection } from '@/components/settings/AccountSection'
+import { useUserSettingsStore } from '@/stores/userSettingsStore'
+import { getPersona } from '@/lib/prompts'
+import { REGIONS } from '@/lib/config/regions'
+import { useTranslation } from '@/lib/i18n'
+import type { RegionCode } from '@/lib/types'
 
-const LIMITE_KEYS: { key: Tag | 'all'; label: string; color?: string }[] = [
-  { key: 'all', label: 'Geral' },
-  ...CATEGORIES.map((c) => ({ key: c.value as Tag | 'all', label: c.label, color: c.color })),
-]
-
-function getLabelFor(key: string) {
-  return LIMITE_KEYS.find((r) => r.key === key)?.label ?? key
+function ChevronRight() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="h-4 w-4 shrink-0 text-julius-muted">
+      <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+    </svg>
+  )
 }
 
-function getColorFor(key: string) {
-  return LIMITE_KEYS.find((r) => r.key === key)?.color
+interface NavRowProps {
+  href: string
+  icon: React.ReactNode
+  label: string
+  value?: string
+}
+
+function NavRow({ href, icon, label, value }: NavRowProps) {
+  return (
+    <Link
+      href={href}
+      className="flex items-center gap-3 rounded-xl border border-julius-border bg-julius-card px-4 py-3 transition-colors hover:border-julius-accent/50"
+    >
+      <span className="text-julius-muted">{icon}</span>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-julius-text">{label}</p>
+        {value && <p className="text-xs text-julius-muted mt-0.5 truncate">{value}</p>}
+      </div>
+      <ChevronRight />
+    </Link>
+  )
 }
 
 export default function SettingsPage() {
-  const router = useRouter()
-  const { currency, limites, loadSettings, saveCurrency, saveLimites } = useUserSettings()
-  const { canInstall, installed, install } = useInstallPrompt()
-  const [tutorialOpen, setTutorialOpen] = useState(false)
-  const [showInstallGuide, setShowInstallGuide] = useState(false)
-
-  function handleInstallClick() {
-    if (canInstall) {
-      install()
-    } else {
-      setShowInstallGuide(true)
-    }
-  }
-  const [resetting, setResetting] = useState(false)
-  const [deletingAccount, setDeletingAccount] = useState(false)
-  const [confirmDelete, setConfirmDelete] = useState(false)
-  const [confirmReset, setConfirmReset] = useState(false)
-
-  // Limites locais (cópia editável antes de guardar)
-  const [limitesLocal, setLimitesLocal] = useState<Limites>({})
-  const [savingLimites, setSavingLimites] = useState(false)
-
-  // Categoria seleccionada no selector
-  const [selectedKey, setSelectedKey] = useState<Tag | 'all'>('all')
-  const [inputDiario, setInputDiario] = useState('')
-  const [inputMensal, setInputMensal] = useState('')
-
-  useEffect(() => { loadSettings() }, [loadSettings])
-
-  useEffect(() => {
-    setLimitesLocal(limites ?? {})
-  }, [limites])
-
-  // Sincronizar inputs quando muda categoria seleccionada
-  useEffect(() => {
-    const l = limitesLocal[selectedKey]
-    setInputDiario(l?.diario != null ? String(l.diario) : '')
-    setInputMensal(l?.mensal != null ? String(l.mensal) : '')
-  }, [selectedKey, limitesLocal])
-
-  function applyCurrentInputs() {
-    const diario = inputDiario ? parseFloat(inputDiario.replace(',', '.')) : null
-    const mensal = inputMensal ? parseFloat(inputMensal.replace(',', '.')) : null
-    const limiteKey: LimitePeriodo = {
-      diario: diario && !isNaN(diario) ? diario : null,
-      mensal: mensal && !isNaN(mensal) ? mensal : null,
-    }
-    return { ...limitesLocal, [selectedKey]: limiteKey }
-  }
-
-  async function handleSaveLimites() {
-    setSavingLimites(true)
-    try {
-      const updated = applyCurrentInputs()
-      await saveLimites(updated)
-      setLimitesLocal(updated)
-    } finally {
-      setSavingLimites(false)
-    }
-  }
-
-  function handleRemoveLimite(key: string) {
-    const updated = { ...limitesLocal }
-    delete updated[key as Tag | 'all']
-    setLimitesLocal(updated)
-    saveLimites(updated)
-  }
-
-  // Limites já definidos (excluindo o seleccionado actualmente para evitar duplicado)
-  const limitesDefinidos = Object.entries(limitesLocal).filter(
-    ([, v]) => v.diario != null || v.mensal != null
-  )
-
-  const currencySymbol = currency === 'EUR' ? '€' : 'R$'
-
-  async function handleLogout() {
-    const supabase = createClient()
-    await supabase.auth.signOut()
-    window.location.href = '/login'
-  }
-
-  async function handleReset() {
-    setResetting(true)
-    try {
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-      await Promise.all([
-        supabase.from('transacoes').delete().eq('user_id', user.id),
-        supabase.from('chat_history').delete().eq('user_id', user.id),
-      ])
-      setConfirmReset(false)
-      router.push('/chat')
-    } finally {
-      setResetting(false)
-    }
-  }
-
-  async function handleDeleteAccount() {
-    setDeletingAccount(true)
-    try {
-      const supabase = createClient()
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) throw new Error('Sessão expirada.')
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      const res = await fetch(`${supabaseUrl}/functions/v1/delete-account`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'apikey': supabaseAnonKey,
-          'Content-Type': 'application/json',
-        },
-      })
-      if (!res.ok) throw new Error(`Erro ${res.status}`)
-      await supabase.auth.signOut()
-      window.location.href = '/login'
-    } catch (err) {
-      console.error('delete-account error:', err)
-      alert('Erro ao excluir conta. Tenta de novo.')
-      setDeletingAccount(false)
-      setConfirmDelete(false)
-    }
-  }
+  const { region, persona } = useUserSettingsStore()
+  const t = useTranslation()
+  const regionConfig = region ? REGIONS[region as RegionCode] : null
+  const personaConfig = getPersona(persona)
 
   return (
     <div className="px-4 py-4 space-y-6 pb-8">
 
-      {/* Moeda */}
+      {/* General navigation rows */}
       <section>
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-julius-muted mb-3">Moeda</h2>
-        <div className="flex gap-2">
-          {(['EUR', 'BRL'] as Currency[]).map((c) => (
-            <button
-              key={c}
-              onClick={() => saveCurrency(c)}
-              className={`flex-1 rounded-xl border py-3 text-sm font-semibold transition-colors ${
-                currency === c
-                  ? 'border-julius-accent bg-julius-accent text-white'
-                  : 'border-julius-border bg-julius-card text-julius-muted hover:text-julius-text'
-              }`}
-            >
-              {c === 'EUR' ? '€ Euro' : 'R$ Real'}
-            </button>
-          ))}
-        </div>
-      </section>
-
-      {/* Limites de Gasto */}
-      <section>
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-julius-muted mb-3">Limites de Gasto</h2>
-        <div className="rounded-xl bg-julius-card border border-julius-border p-4 space-y-3">
-          {/* Selector de categoria */}
-          <div className="relative">
-            <select
-              value={selectedKey}
-              onChange={(e) => setSelectedKey(e.target.value as Tag | 'all')}
-              className="w-full appearance-none rounded-xl border border-julius-border bg-julius-bg px-3 py-2.5 text-sm text-julius-text focus:border-julius-accent focus:outline-none cursor-pointer"
-            >
-              {LIMITE_KEYS.map((r) => (
-                <option key={r.key} value={r.key}>{r.label}</option>
-              ))}
-            </select>
-            <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
-              <svg className="h-4 w-4 text-julius-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </div>
-          </div>
-
-          {/* Inputs Diário + Mensal */}
-          <div className="flex gap-2">
-            <div className="flex-1">
-              <label className="mb-1 block text-xs text-julius-muted">Diário ({currencySymbol})</label>
-              <input
-                type="text"
-                inputMode="decimal"
-                placeholder="—"
-                value={inputDiario}
-                onChange={(e) => setInputDiario(e.target.value)}
-                className="w-full rounded-xl border border-julius-border bg-julius-bg px-3 py-2 text-sm text-julius-text placeholder:text-julius-muted focus:border-julius-accent focus:outline-none"
-              />
-            </div>
-            <div className="flex-1">
-              <label className="mb-1 block text-xs text-julius-muted">Mensal ({currencySymbol})</label>
-              <input
-                type="text"
-                inputMode="decimal"
-                placeholder="—"
-                value={inputMensal}
-                onChange={(e) => setInputMensal(e.target.value)}
-                className="w-full rounded-xl border border-julius-border bg-julius-bg px-3 py-2 text-sm text-julius-text placeholder:text-julius-muted focus:border-julius-accent focus:outline-none"
-              />
-            </div>
-          </div>
-
-          <button
-            onClick={handleSaveLimites}
-            disabled={savingLimites}
-            className="w-full rounded-xl bg-julius-accent py-2.5 text-sm font-medium text-white disabled:opacity-50 active:opacity-80"
-          >
-            {savingLimites ? 'A guardar...' : 'Guardar limite'}
-          </button>
-
-          {/* Limites já definidos */}
-          {limitesDefinidos.length > 0 && (
-            <div className="space-y-1.5 pt-1">
-              <p className="text-xs text-julius-muted">Limites definidos</p>
-              {limitesDefinidos.map(([key, v]) => {
-                const color = getColorFor(key)
-                const label = getLabelFor(key)
-                const parts = []
-                if (v.diario != null) parts.push(`Diário: ${formatCurrency(v.diario, currency)}`)
-                if (v.mensal != null) parts.push(`Mensal: ${formatCurrency(v.mensal, currency)}`)
-                return (
-                  <div key={key} className="flex items-center justify-between rounded-lg bg-julius-bg px-3 py-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span
-                        className="h-2 w-2 shrink-0 rounded-full"
-                        style={{ backgroundColor: color ?? '#94A3B8' }}
-                      />
-                      <span className="text-xs text-julius-text truncate">{label}</span>
-                      <span className="text-xs text-julius-muted truncate">{parts.join(' · ')}</span>
-                    </div>
-                    <button
-                      onClick={() => handleRemoveLimite(key)}
-                      className="ml-2 shrink-0 text-julius-muted hover:text-julius-danger"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="h-3.5 w-3.5">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* Tutorial */}
-      <section>
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-julius-muted mb-3">Ajuda</h2>
-        <div className="rounded-xl bg-julius-card border border-julius-border overflow-hidden divide-y divide-julius-border">
-          <button
-            onClick={() => setTutorialOpen(true)}
-            className="flex w-full items-center justify-between px-4 py-3 text-sm font-medium text-julius-text hover:bg-julius-bg transition-colors"
-          >
-            <span className="flex items-center gap-2">
-              <span className="text-base">📖</span>
-              Como usar o Julius
-            </span>
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="h-4 w-4 text-julius-muted">
-              <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
-            </svg>
-          </button>
-
-          {!installed && (
-            <button
-              onClick={handleInstallClick}
-              className="flex w-full items-center justify-between px-4 py-3 text-sm font-medium text-julius-text hover:bg-julius-bg transition-colors"
-            >
-              <span className="flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-5 w-5 text-julius-muted">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                </svg>
-                Instalar como App
-              </span>
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="h-4 w-4 text-julius-muted">
-                <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
-              </svg>
-            </button>
-          )}
-        </div>
-      </section>
-
-      {/* Conta */}
-      <section>
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-julius-muted mb-3">Conta</h2>
-        <div className="rounded-xl bg-julius-card border border-julius-border overflow-hidden divide-y divide-julius-border">
-          <button
-            onClick={handleLogout}
-            className="flex w-full items-center gap-3 px-4 py-3.5 text-sm font-medium text-julius-text hover:bg-julius-bg transition-colors"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-5 w-5 text-julius-muted">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 9V5.25A2.25 2.25 0 0 1 10.5 3h6a2.25 2.25 0 0 1 2.25 2.25v13.5A2.25 2.25 0 0 1 16.5 21h-6a2.25 2.25 0 0 1-2.25-2.25V15m-3 0-3-3m0 0 3-3m-3 3H15" />
-            </svg>
-            Terminar sessão
-          </button>
-
-          {confirmReset ? (
-            <div className="px-4 py-3 bg-julius-bg">
-              <p className="text-sm text-julius-warning mb-3 font-medium">Tens a certeza? Apaga TODAS as transações e histórico do chat.</p>
-              <div className="flex gap-2">
-                <button onClick={() => setConfirmReset(false)} className="flex-1 rounded-lg bg-julius-card py-2 text-sm font-medium text-julius-muted border border-julius-border">Cancelar</button>
-                <button onClick={handleReset} disabled={resetting} className="flex-1 rounded-lg bg-julius-danger py-2 text-sm font-medium text-white disabled:opacity-60">
-                  {resetting ? 'A apagar...' : 'Apagar tudo'}
-                </button>
-              </div>
-            </div>
-          ) : (
-            <button onClick={() => setConfirmReset(true)} className="flex w-full items-center gap-3 px-4 py-3.5 text-sm font-medium text-julius-warning hover:bg-julius-bg transition-colors">
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-julius-muted mb-3">{t.settings.general}</h2>
+        <div className="space-y-2">
+          <NavRow
+            href="/settings/region"
+            label={t.settings.regionTitle}
+            value={regionConfig ? `${regionConfig.flag} ${regionConfig.nameEnglish} · ${regionConfig.currencyName}` : undefined}
+            icon={
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-5 w-5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9.004 9.004 0 0 0 8.716-6.747M12 21a9.004 9.004 0 0 1-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 0 1 7.843 4.582M12 3a8.997 8.997 0 0 0-7.843 4.582m15.686 0A11.953 11.953 0 0 1 12 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0 1 21 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0 1 12 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 0 1 3 12c0-1.605.42-3.113 1.157-4.418" />
               </svg>
-              Limpar todos os dados
-            </button>
-          )}
+            }
+          />
 
-          {confirmDelete ? (
-            <div className="px-4 py-3 bg-julius-bg">
-              <p className="text-sm text-julius-danger mb-3 font-medium">Esta ação é irreversível. A tua conta e todos os dados serão eliminados permanentemente.</p>
-              <div className="flex gap-2">
-                <button onClick={() => setConfirmDelete(false)} className="flex-1 rounded-lg bg-julius-card py-2 text-sm font-medium text-julius-muted border border-julius-border">Cancelar</button>
-                <button onClick={handleDeleteAccount} disabled={deletingAccount} className="flex-1 rounded-lg bg-julius-danger py-2 text-sm font-medium text-white disabled:opacity-60">
-                  {deletingAccount ? 'A eliminar...' : 'Eliminar conta'}
-                </button>
-              </div>
-            </div>
-          ) : (
-            <button onClick={() => setConfirmDelete(true)} className="flex w-full items-center gap-3 px-4 py-3.5 text-sm font-medium text-julius-danger hover:bg-julius-bg transition-colors">
+          <NavRow
+            href="/settings/persona"
+            label={t.settings.personaTitle}
+            value={personaConfig.name}
+            icon={
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-5 w-5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
               </svg>
-              Eliminar conta
-            </button>
-          )}
+            }
+          />
+
+          <NavRow
+            href="/settings/receipt"
+            label={t.settings.receiptPhotos}
+            icon={
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-5 w-5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" />
+              </svg>
+            }
+          />
+
+          <NavRow
+            href="/settings/limits"
+            label={t.settings.limitsTitle}
+            icon={
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-5 w-5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+              </svg>
+            }
+          />
         </div>
       </section>
 
-      <TutorialModal open={tutorialOpen} onClose={() => setTutorialOpen(false)} />
+      {/* Help */}
+      <HelpSection />
 
-      {showInstallGuide && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 px-4 pb-8" onClick={() => setShowInstallGuide(false)}>
-          <div className="w-full max-w-sm rounded-2xl bg-julius-card border border-julius-border p-5" onClick={(e) => e.stopPropagation()}>
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-base font-semibold text-julius-text">Instalar Julius</h3>
-              <button onClick={() => setShowInstallGuide(false)} className="text-julius-muted hover:text-julius-text">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="h-5 w-5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            <div className="space-y-3 text-sm text-julius-muted">
-              <div className="flex items-start gap-3">
-                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-julius-accent text-[11px] font-bold text-white">1</span>
-                <p>No Chrome, toca nos <strong className="text-julius-text">3 pontos ⋮</strong> no canto superior direito</p>
-              </div>
-              <div className="flex items-start gap-3">
-                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-julius-accent text-[11px] font-bold text-white">2</span>
-                <p>Seleciona <strong className="text-julius-text">&quot;Adicionar ao ecrã principal&quot;</strong> ou <strong className="text-julius-text">&quot;Instalar app&quot;</strong></p>
-              </div>
-              <div className="flex items-start gap-3">
-                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-julius-accent text-[11px] font-bold text-white">3</span>
-                <p>Confirma e o Julius fica no teu ecrã inicial como uma app</p>
-              </div>
-            </div>
-            <button
-              onClick={() => setShowInstallGuide(false)}
-              className="mt-5 w-full rounded-xl bg-julius-accent py-2.5 text-sm font-semibold text-white"
-            >
-              Entendido
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Account */}
+      <AccountSection />
+
     </div>
   )
 }

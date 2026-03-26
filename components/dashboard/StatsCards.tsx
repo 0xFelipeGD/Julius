@@ -2,6 +2,7 @@
 
 import { formatCurrency } from '@/lib/utils/currency'
 import { useUserSettingsStore } from '@/stores/userSettingsStore'
+import { useTranslation } from '@/lib/i18n'
 
 interface StatsCardsProps {
   total: number
@@ -10,11 +11,12 @@ interface StatsCardsProps {
 }
 
 export function StatsCards({ total, average, isLoading }: StatsCardsProps) {
+  const t = useTranslation()
   const currency = useUserSettingsStore((s) => s.currency)
   return (
     <div className="grid grid-cols-2 gap-3 px-4">
       <div className="rounded-xl bg-julius-card p-4">
-        <p className="text-xs text-julius-muted">Total do período</p>
+        <p className="text-xs text-julius-muted">{t.dashboard.totalPeriod}</p>
         {isLoading ? (
           <div className="mt-1 h-7 w-24 animate-pulse rounded bg-julius-border" />
         ) : (
@@ -22,7 +24,7 @@ export function StatsCards({ total, average, isLoading }: StatsCardsProps) {
         )}
       </div>
       <div className="rounded-xl bg-julius-card p-4">
-        <p className="text-xs text-julius-muted">Média por dia</p>
+        <p className="text-xs text-julius-muted">{t.dashboard.dailyAverage}</p>
         {isLoading ? (
           <div className="mt-1 h-7 w-24 animate-pulse rounded bg-julius-border" />
         ) : (
