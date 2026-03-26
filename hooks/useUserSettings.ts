@@ -28,6 +28,7 @@ export function useUserSettings() {
       const derivedCurrency = region ? currencyForRegion(region) : (data.currency as Currency) ?? 'EUR'
 
       store.getState().setRegion(region)
+      if (region) localStorage.setItem('julius_region', region)
       store.getState().setCurrency(derivedCurrency)
       store.getState().setEnabledCategories((data.enabled_categories as Tag[]) ?? ALL_TAGS)
       store.getState().setLimites((data.limites as Limites) ?? {})
@@ -46,6 +47,7 @@ export function useUserSettings() {
     const firstPersonaId = firstPersona?.id ?? null
 
     store.getState().setRegion(region)
+    localStorage.setItem('julius_region', region)
     store.getState().setCurrency(newCurrency)
     store.getState().setPersona(firstPersonaId)
 

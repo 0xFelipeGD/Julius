@@ -2,6 +2,11 @@ import { create } from 'zustand'
 import { ALL_TAGS } from '@/lib/categories'
 import type { Currency, Tag, Limites, RegionCode } from '@/lib/types'
 
+function getStoredRegion(): RegionCode | null {
+  if (typeof window === 'undefined') return null
+  return (localStorage.getItem('julius_region') as RegionCode) || null
+}
+
 interface UserSettingsState {
   region: RegionCode | null
   currency: Currency
@@ -21,7 +26,7 @@ interface UserSettingsState {
 }
 
 export const useUserSettingsStore = create<UserSettingsState>((set) => ({
-  region: null,
+  region: getStoredRegion(),
   currency: 'EUR',
   enabledCategories: ALL_TAGS,
   limites: {},
