@@ -44,14 +44,14 @@ Deno.serve(async (req: Request) => {
     // Override available tags if user has custom selection
     const tagsStr = tags_disponiveis && tags_disponiveis.length > 0
       ? tags_disponiveis.join(', ')
-      : 'Alimentacao, Transporte, Saude, Lazer, Habitacao, Outros'
+      : 'Alimentacao, Transporte, Saude, Lazer, Habitacao, Impostos, Outros'
     const promptWithTags = basePrompt.includes('TAGS DISPONÍVEIS')
       ? basePrompt.replace(
-          'TAGS DISPONÍVEIS (usa exactamente): Alimentacao, Transporte, Saude, Lazer, Habitacao, Outros',
+          'TAGS DISPONÍVEIS (usa exactamente): Alimentacao, Transporte, Saude, Lazer, Habitacao, Impostos, Outros',
           `TAGS DISPONÍVEIS (usa exactamente): ${tagsStr}`
         )
       : basePrompt.replace(
-          'AVAILABLE TAGS (use exactly): Alimentacao, Transporte, Saude, Lazer, Habitacao, Outros',
+          'AVAILABLE TAGS (use exactly): Alimentacao, Transporte, Saude, Lazer, Habitacao, Impostos, Outros',
           `AVAILABLE TAGS (use exactly): ${tagsStr}`
         )
 
