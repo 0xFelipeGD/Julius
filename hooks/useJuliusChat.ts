@@ -7,6 +7,7 @@ import { useAppStore } from '@/stores/appStore'
 import { useUserSettingsStore } from '@/stores/userSettingsStore'
 import { formatCurrency } from '@/lib/utils/currency'
 import { getPersona } from '@/lib/prompts'
+import { ALL_TAGS } from '@/lib/categories'
 import type { ChatMessage, JuliusChatResponse, TransacaoPendente } from '@/lib/types'
 
 const PENDING_KEY = 'julius_pending_transaction'
@@ -32,11 +33,21 @@ export function useJuliusChat() {
     // Only fetch from Supabase if messages are not yet loaded
     if (chatMessages.length > 0) return
 
-    const { data } = await supabase
+    // Ensure session is valid before querying (handles token refresh on mobile PWA)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    const { data, error } = await supabase
       .from('chat_history')
       .select('*')
+      .eq('user_id', user.id)
       .order('created_at', { ascending: true })
       .limit(50)
+
+    if (error) {
+      console.error('[Julius] loadHistory error:', error)
+      return
+    }
 
     if (data) {
       const loaded = (data as Array<{ id: string; role: string; content: string; tipo: string; created_at: string }>).map((msg) => ({
@@ -115,6 +126,7 @@ export function useJuliusChat() {
           })),
           region: region ?? 'PT',
           persona_id: persona ?? 'julius',
+          tags_disponiveis: ALL_TAGS,
         }),
       })
 

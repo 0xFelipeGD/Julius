@@ -94,7 +94,10 @@ function fillMissingDays(stats: DayStats[], from: string, to: string): DayStats[
   const cappedEnd = end < today ? end : today
 
   while (current <= cappedEnd) {
-    const iso = current.toISOString().split('T')[0]
+    const y = current.getFullYear()
+    const m = String(current.getMonth() + 1).padStart(2, '0')
+    const d = String(current.getDate()).padStart(2, '0')
+    const iso = `${y}-${m}-${d}`
     filled.push(existing.get(iso) ?? {
       dia: iso,
       total: 0,
