@@ -20,16 +20,23 @@ export default function DashboardPage() {
   const locale = region ? getRegionConfig(region).locale : 'pt-PT'
   const [periodo, setPeriodo] = useState<Periodo>('mes')
   const [tag, setTag] = useState<Tag | 'all'>('all')
+  const [selectedMonth, setSelectedMonth] = useState<number | null>(null)
   const year = useAppStore((s) => s.selectedYear)
 
-  const { data, isLoading } = useStats(periodo, tag === 'all' ? undefined : tag, year)
+  const { data, isLoading } = useStats(periodo, tag === 'all' ? undefined : tag, year, selectedMonth ?? undefined)
 
   return (
     <div className="pb-4">
       {/* Filtros período + categoria */}
       <div className="flex gap-3 px-4 py-3">
         <div className="flex-1">
-          <PeriodFilter selected={periodo} onChange={setPeriodo} />
+          <PeriodFilter
+            selected={periodo}
+            onChange={setPeriodo}
+            selectedMonth={selectedMonth}
+            onMonthChange={setSelectedMonth}
+            year={year}
+          />
         </div>
         <div className="relative flex-1">
           <select

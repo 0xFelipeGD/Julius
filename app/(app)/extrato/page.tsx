@@ -39,9 +39,10 @@ export default function ExtratoPage() {
   const [tag, setTag] = useState<Tag | 'all'>('all')
   const [search, setSearch] = useState('')
   const [editingTransaction, setEditingTransaction] = useState<Transacao | null>(null)
+  const [selectedMonth, setSelectedMonth] = useState<number | null>(null)
   const year = useAppStore((s) => s.selectedYear)
 
-  const { data: transactions, isLoading } = useTransactions(periodo, tag === 'all' ? undefined : tag, year)
+  const { data: transactions, isLoading } = useTransactions(periodo, tag === 'all' ? undefined : tag, year, selectedMonth ?? undefined)
   const deleteTransaction = useDeleteTransaction()
   const updateTransaction = useUpdateTransaction()
   const currency = useUserSettingsStore((s) => s.currency)
@@ -60,9 +61,13 @@ export default function ExtratoPage() {
   function handleExportPDF() {
     if (!filteredTransactions.length) return
     const total = filteredTransactions.reduce((sum, t) => sum + Number(t.valor), 0)
-    const average = total / getCalendarDays(periodo, year)
-    const doc = generateReport({ transactions: filteredTransactions, periodo, year, currency, total, average })
-    doc.save(`julius-relatorio-${periodo}-${new Date().toISOString().split('T')[0]}.pdf`)
+    const average = total / getCalendarDays(periodo, year, selectedMonth ?? undefined)
+    const periodLabel = selectedMonth !== null
+      ? new Intl.DateTimeFormat('pt-PT', { month: 'long', year: 'numeric' }).format(new Date(year, selectedMonth, 1))
+      : undefined
+    const doc = generateReport({ transactions: filteredTransactions, periodo, year, currency, total, average, periodLabel })
+    const slug = selectedMonth !== null ? `${year}-${String(selectedMonth + 1).padStart(2, '0')}` : periodo
+    doc.save(`julius-relatorio-${slug}-${new Date().toISOString().split('T')[0]}.pdf`)
   }
 
   function handleDelete(id: string) { deleteTransaction.mutate(id) }
@@ -79,6 +84,9 @@ export default function ExtratoPage() {
           tag={tag}
           onPeriodoChange={setPeriodo}
           onTagChange={setTag}
+          selectedMonth={selectedMonth}
+          onMonthChange={setSelectedMonth}
+          year={year}
         />
         <div className="flex items-center gap-2">
           <button

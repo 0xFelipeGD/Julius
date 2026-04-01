@@ -5,7 +5,11 @@ import { createClient } from '@/lib/supabase/client'
 import { ALL_TAGS } from '@/lib/categories'
 import type { Periodo, Tag, DayStats } from '@/lib/types'
 
-function getCalendarDays(periodo: Periodo, year: number): number {
+function getCalendarDays(periodo: Periodo, year: number, month?: number): number {
+  if (month !== undefined && month !== null) {
+    return new Date(year, month + 1, 0).getDate()
+  }
+
   const now = new Date()
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
 
@@ -29,12 +33,6 @@ function getCalendarDays(periodo: Periodo, year: number): number {
       return Math.floor((end.getTime() - firstDay.getTime()) / (1000 * 60 * 60 * 24)) + 1
     }
 
-    case 'ultimo_mes': {
-      const firstDay = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-      const lastDay = new Date(now.getFullYear(), now.getMonth(), 0)
-      return Math.floor((lastDay.getTime() - firstDay.getTime()) / (1000 * 60 * 60 * 24)) + 1
-    }
-
     case 'trimestre': {
       const q = Math.floor(now.getMonth() / 3) * 3
       const firstDay = new Date(year, q, 1)
@@ -52,7 +50,16 @@ function getCalendarDays(periodo: Periodo, year: number): number {
   }
 }
 
-function getPeriodRange(periodo: Periodo, year: number): { from: string; to: string } {
+function getPeriodRange(periodo: Periodo, year: number, month?: number): { from: string; to: string } {
+  if (month !== undefined && month !== null) {
+    const mm = String(month + 1).padStart(2, '0')
+    const lastDay = new Date(year, month + 1, 0)
+    return {
+      from: `${year}-${mm}-01`,
+      to: `${year}-${mm}-${String(lastDay.getDate()).padStart(2, '0')}`,
+    }
+  }
+
   const now = new Date()
 
   switch (periodo) {
@@ -75,12 +82,6 @@ function getPeriodRange(periodo: Periodo, year: number): { from: string; to: str
         from: `${year}-${String(month + 1).padStart(2, '0')}-01`,
         to: `${year}-${String(month + 1).padStart(2, '0')}-${String(to.getDate()).padStart(2, '0')}`,
       }
-    }
-    case 'ultimo_mes': {
-      const from = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-      const to = new Date(now.getFullYear(), now.getMonth(), 0)
-      const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-      return { from: fmt(from), to: fmt(to) }
     }
     case 'trimestre': {
       const q = Math.floor(now.getMonth() / 3) * 3
@@ -120,14 +121,14 @@ function fillMissingDays(stats: DayStats[], from: string, to: string): DayStats[
   return filled
 }
 
-export function useStats(periodo: Periodo, tag?: Tag, year?: number) {
+export function useStats(periodo: Periodo, tag?: Tag, year?: number, month?: number) {
   const supabase = createClient()
   const effectiveYear = year ?? new Date().getFullYear()
 
   return useQuery<{ dayStats: DayStats[]; total: number; average: number }>({
-    queryKey: ['stats', periodo, tag, effectiveYear],
+    queryKey: ['stats', periodo, tag, effectiveYear, month],
     queryFn: async () => {
-      const { from, to } = getPeriodRange(periodo, effectiveYear)
+      const { from, to } = getPeriodRange(periodo, effectiveYear, month)
       let query = supabase
         .from('transacoes')
         .select('*')
@@ -160,7 +161,7 @@ export function useStats(periodo: Periodo, tag?: Tag, year?: number) {
       const filledDayStats = fillMissingDays(dayStats, from, to)
 
       const total = filledDayStats.reduce((sum, d) => sum + d.total, 0)
-      const calendarDays = getCalendarDays(periodo, effectiveYear)
+      const calendarDays = getCalendarDays(periodo, effectiveYear, month)
       const average = total / calendarDays
 
       return { dayStats: filledDayStats, total, average }

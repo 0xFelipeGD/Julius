@@ -1,6 +1,10 @@
 import type { Periodo } from '@/lib/types'
 
-export function getCalendarDays(periodo: Periodo, year: number): number {
+export function getCalendarDays(periodo: Periodo, year: number, month?: number): number {
+  if (month !== undefined && month !== null) {
+    return new Date(year, month + 1, 0).getDate()
+  }
+
   const now = new Date()
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
 
@@ -22,12 +26,6 @@ export function getCalendarDays(periodo: Periodo, year: number): number {
       const lastDay = new Date(year, now.getMonth() + 1, 0)
       const end = today < lastDay ? today : lastDay
       return Math.floor((end.getTime() - firstDay.getTime()) / (1000 * 60 * 60 * 24)) + 1
-    }
-
-    case 'ultimo_mes': {
-      const firstDay = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-      const lastDay = new Date(now.getFullYear(), now.getMonth(), 0)
-      return Math.floor((lastDay.getTime() - firstDay.getTime()) / (1000 * 60 * 60 * 24)) + 1
     }
 
     case 'trimestre': {
