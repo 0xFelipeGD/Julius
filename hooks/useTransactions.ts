@@ -4,7 +4,16 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import type { Transacao, Periodo, Tag } from '@/lib/types'
 
-function getPeriodRange(periodo: Periodo, year: number): { from: string; to: string } {
+function getPeriodRange(periodo: Periodo, year: number, month?: number): { from: string; to: string } {
+  if (month !== undefined && month !== null) {
+    const mm = String(month + 1).padStart(2, '0')
+    const lastDay = new Date(year, month + 1, 0)
+    return {
+      from: `${year}-${mm}-01`,
+      to: `${year}-${mm}-${String(lastDay.getDate()).padStart(2, '0')}`,
+    }
+  }
+
   const now = new Date()
   const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
 
@@ -20,19 +29,12 @@ function getPeriodRange(periodo: Periodo, year: number): { from: string; to: str
       return { from: fmt(from), to: fmt(to) }
     }
     case 'mes': {
-      const month = now.getMonth()
-      const from = new Date(year, month, 1)
-      const to = new Date(year, month + 1, 0)
+      const m = now.getMonth()
+      const to = new Date(year, m + 1, 0)
       return {
-        from: `${year}-${String(month + 1).padStart(2, '0')}-01`,
-        to: `${year}-${String(month + 1).padStart(2, '0')}-${String(to.getDate()).padStart(2, '0')}`,
+        from: `${year}-${String(m + 1).padStart(2, '0')}-01`,
+        to: `${year}-${String(m + 1).padStart(2, '0')}-${String(to.getDate()).padStart(2, '0')}`,
       }
-    }
-    case 'ultimo_mes': {
-      const from = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-      const to = new Date(now.getFullYear(), now.getMonth(), 0)
-      const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-      return { from: fmt(from), to: fmt(to) }
     }
     case 'trimestre': {
       const q = Math.floor(now.getMonth() / 3) * 3
@@ -46,14 +48,14 @@ function getPeriodRange(periodo: Periodo, year: number): { from: string; to: str
   }
 }
 
-export function useTransactions(periodo: Periodo, tag?: Tag, year?: number) {
+export function useTransactions(periodo: Periodo, tag?: Tag, year?: number, month?: number) {
   const supabase = createClient()
   const effectiveYear = year ?? new Date().getFullYear()
 
   return useQuery<Transacao[]>({
-    queryKey: ['transactions', periodo, tag, effectiveYear],
+    queryKey: ['transactions', periodo, tag, effectiveYear, month],
     queryFn: async () => {
-      const { from, to } = getPeriodRange(periodo, effectiveYear)
+      const { from, to } = getPeriodRange(periodo, effectiveYear, month)
       let query = supabase
         .from('transacoes')
         .select('*')

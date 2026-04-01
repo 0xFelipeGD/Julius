@@ -15,10 +15,11 @@ interface ReportData {
   average: number
   locale?: Locale
   translations?: Translations
+  periodLabel?: string
 }
 
 export function generateReport(data: ReportData): jsPDF {
-  const { transactions, periodo, year, currency, total, average, locale = 'pt-PT', translations } = data
+  const { transactions, periodo, year, currency, total, average, locale = 'pt-PT', translations, periodLabel } = data
   const tr = translations
   const periodoLabels: Record<Periodo, string> = tr?.pdf.periods ?? {
     hoje: 'Hoje', semana: 'Semana', mes: 'Mês', trimestre: 'Trimestre', total: 'Ano',
@@ -52,7 +53,7 @@ export function generateReport(data: ReportData): jsPDF {
   doc.setFont('helvetica', 'normal')
   doc.text(tr?.pdf.subtitle ?? 'Relatório Financeiro', MARGIN, y + 7)
   doc.text(
-    `${periodoLabels[periodo]}${periodo === 'total' ? ` ${year}` : ''} · ${tr?.pdf.generatedAt ?? 'Gerado a'} ${new Date().toLocaleDateString(locale)}`,
+    `${periodLabel ?? periodoLabels[periodo]}${!periodLabel && periodo === 'total' ? ` ${year}` : ''} · ${tr?.pdf.generatedAt ?? 'Gerado a'} ${new Date().toLocaleDateString(locale)}`,
     MARGIN,
     y + 13
   )

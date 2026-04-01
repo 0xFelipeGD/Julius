@@ -11,8 +11,8 @@ import {
 } from '@/lib/categories'
 
 describe('CATEGORIES', () => {
-  it('tem 6 categorias', () => {
-    expect(CATEGORIES).toHaveLength(6)
+  it('tem 7 categorias', () => {
+    expect(CATEGORIES).toHaveLength(7)
   })
 
   it('cada categoria tem todos os campos obrigatórios', () => {
@@ -35,6 +35,7 @@ describe('CATEGORIES', () => {
     expect(values).toContain('Lazer')
     expect(values).toContain('Habitacao')
     expect(values).toContain('Outros')
+    expect(values).toContain('Impostos')
   })
 })
 

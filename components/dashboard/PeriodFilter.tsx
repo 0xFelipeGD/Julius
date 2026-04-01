@@ -6,15 +6,15 @@ import { useTranslation } from '@/lib/i18n'
 interface PeriodFilterProps {
   selected: Periodo
   onChange: (p: Periodo) => void
+  dimmed?: boolean
 }
 
-export function PeriodFilter({ selected, onChange }: PeriodFilterProps) {
+export function PeriodFilter({ selected, onChange, dimmed }: PeriodFilterProps) {
   const t = useTranslation()
   const PERIODS: { value: Periodo; label: string }[] = [
-    { value: 'hoje', label: t.periods.hoje },
-    { value: 'semana', label: t.periods.semana },
     { value: 'mes', label: t.periods.mes },
-    { value: 'ultimo_mes', label: t.periods.ultimo_mes },
+    { value: 'semana', label: t.periods.semana },
+    { value: 'hoje', label: t.periods.hoje },
     { value: 'trimestre', label: t.periods.trimestre },
     { value: 'total', label: t.periods.total },
   ]
@@ -23,7 +23,7 @@ export function PeriodFilter({ selected, onChange }: PeriodFilterProps) {
       <select
         value={selected}
         onChange={(e) => onChange(e.target.value as Periodo)}
-        className="w-full appearance-none bg-julius-card text-julius-text border border-julius-border rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:border-julius-accent cursor-pointer"
+        className={`w-full appearance-none bg-julius-card text-julius-text border border-julius-border rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:border-julius-accent cursor-pointer transition-opacity ${dimmed ? 'opacity-40' : ''}`}
       >
         {PERIODS.map((p) => (
           <option key={p.value} value={p.value}>
