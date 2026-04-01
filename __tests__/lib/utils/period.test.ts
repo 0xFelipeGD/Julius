@@ -55,3 +55,35 @@ describe('getCalendarDays', () => {
     expect(getCalendarDays('mes', 2026)).toBeLessThanOrEqual(31)
   })
 })
+
+describe('getCalendarDays com mês específico', () => {
+  it('ignora o periodo e retorna os dias do mês indicado', () => {
+    // Janeiro 2026 tem 31 dias
+    expect(getCalendarDays('hoje', 2026, 0)).toBe(31)
+    expect(getCalendarDays('total', 2026, 0)).toBe(31)
+  })
+
+  it('Fevereiro 2026 tem 28 dias (não bissexto)', () => {
+    expect(getCalendarDays('mes', 2026, 1)).toBe(28)
+  })
+
+  it('Fevereiro 2024 tem 29 dias (bissexto)', () => {
+    expect(getCalendarDays('mes', 2024, 1)).toBe(29)
+  })
+
+  it('Março 2026 tem 31 dias', () => {
+    expect(getCalendarDays('mes', 2026, 2)).toBe(31)
+  })
+
+  it('Abril 2026 tem 30 dias', () => {
+    expect(getCalendarDays('mes', 2026, 3)).toBe(30)
+  })
+
+  it('retorna sempre um número entre 28 e 31', () => {
+    for (let m = 0; m < 12; m++) {
+      const days = getCalendarDays('mes', 2026, m)
+      expect(days).toBeGreaterThanOrEqual(28)
+      expect(days).toBeLessThanOrEqual(31)
+    }
+  })
+})

@@ -34,19 +34,6 @@ export function ExtractFilters({ periodo, tag, onPeriodoChange, onTagChange, sel
     return name.charAt(0).toUpperCase() + name.slice(1)
   })
 
-  function handlePeriodChange(p: Periodo) {
-    onPeriodoChange(p)
-    onMonthChange(null)
-  }
-
-  function handleMonthChange(e: React.ChangeEvent<HTMLSelectElement>) {
-    const val = e.target.value
-    onMonthChange(val === '' ? null : Number(val))
-  }
-
-  const selectClass = (active: boolean) =>
-    `w-full appearance-none bg-julius-card text-julius-text border border-julius-border rounded-xl px-3 py-2.5 text-sm font-medium focus:outline-none focus:border-julius-accent cursor-pointer transition-opacity ${active ? '' : 'opacity-40'}`
-
   const chevron = (
     <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
       <svg className="h-4 w-4 text-julius-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -55,15 +42,20 @@ export function ExtractFilters({ periodo, tag, onPeriodoChange, onTagChange, sel
     </div>
   )
 
+  function handlePeriodChange(p: Periodo) {
+    onPeriodoChange(p)
+    onMonthChange(null)
+  }
+
   return (
     <div className="flex flex-1 flex-col gap-2 px-4 py-3">
-      {/* Period + Category row */}
+      {/* Linha 1: período + categoria */}
       <div className="flex gap-3">
         <div className="relative flex-1">
           <select
             value={periodo}
             onChange={(e) => handlePeriodChange(e.target.value as Periodo)}
-            className={selectClass(selectedMonth === null)}
+            className={`w-full appearance-none bg-julius-card text-julius-text border border-julius-border rounded-xl px-3 py-2.5 text-sm font-medium focus:outline-none focus:border-julius-accent cursor-pointer transition-opacity ${selectedMonth !== null ? 'opacity-40' : ''}`}
           >
             {PERIODS.map((p) => (
               <option key={p.value} value={p.value}>{p.label}</option>
@@ -89,12 +81,12 @@ export function ExtractFilters({ periodo, tag, onPeriodoChange, onTagChange, sel
         </div>
       </div>
 
-      {/* Month picker row */}
+      {/* Linha 2: mês específico (full width) */}
       <div className="relative">
         <select
           value={selectedMonth ?? ''}
-          onChange={handleMonthChange}
-          className={selectClass(selectedMonth !== null)}
+          onChange={(e) => onMonthChange(e.target.value === '' ? null : Number(e.target.value))}
+          className={`w-full appearance-none bg-julius-card text-julius-text border border-julius-border rounded-xl px-3 py-2.5 text-sm font-medium focus:outline-none focus:border-julius-accent cursor-pointer transition-opacity ${selectedMonth === null ? 'opacity-40' : ''}`}
         >
           <option value="">— Mês específico —</option>
           {MONTHS.map((name, i) => (
