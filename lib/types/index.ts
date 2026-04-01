@@ -1,5 +1,5 @@
 export type Tag = 'Alimentacao' | 'Transporte' | 'Saude' | 'Lazer' | 'Habitacao' | 'Impostos' | 'Outros'
-export type Periodo = 'hoje' | 'semana' | 'mes' | 'trimestre' | 'total'
+export type Periodo = 'hoje' | 'semana' | 'mes' | 'ultimo_mes' | 'trimestre' | 'total'
 export type ChatRole = 'user' | 'julius'
 export type MessageTipo = 'texto' | 'imagem' | 'confirmacao'
 export type Currency = 'EUR' | 'BRL' | 'USD'

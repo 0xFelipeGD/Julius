@@ -28,6 +28,12 @@ function getPeriodRange(periodo: Periodo, year: number): { from: string; to: str
         to: `${year}-${String(month + 1).padStart(2, '0')}-${String(to.getDate()).padStart(2, '0')}`,
       }
     }
+    case 'ultimo_mes': {
+      const from = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+      const to = new Date(now.getFullYear(), now.getMonth(), 0)
+      const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      return { from: fmt(from), to: fmt(to) }
+    }
     case 'trimestre': {
       const q = Math.floor(now.getMonth() / 3) * 3
       const from = new Date(year, q, 1)

@@ -71,6 +71,7 @@ export interface Translations {
     hoje: string
     semana: string
     mes: string
+    ultimo_mes: string
     trimestre: string
     total: string
   }

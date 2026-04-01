@@ -14,6 +14,7 @@ export function PeriodFilter({ selected, onChange }: PeriodFilterProps) {
     { value: 'hoje', label: t.periods.hoje },
     { value: 'semana', label: t.periods.semana },
     { value: 'mes', label: t.periods.mes },
+    { value: 'ultimo_mes', label: t.periods.ultimo_mes },
     { value: 'trimestre', label: t.periods.trimestre },
     { value: 'total', label: t.periods.total },
   ]

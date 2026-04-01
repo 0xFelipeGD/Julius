@@ -24,6 +24,12 @@ export function getCalendarDays(periodo: Periodo, year: number): number {
       return Math.floor((end.getTime() - firstDay.getTime()) / (1000 * 60 * 60 * 24)) + 1
     }
 
+    case 'ultimo_mes': {
+      const firstDay = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+      const lastDay = new Date(now.getFullYear(), now.getMonth(), 0)
+      return Math.floor((lastDay.getTime() - firstDay.getTime()) / (1000 * 60 * 60 * 24)) + 1
+    }
+
     case 'trimestre': {
       const q = Math.floor(now.getMonth() / 3) * 3
       const firstDay = new Date(year, q, 1)
