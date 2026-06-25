@@ -1,18 +1,29 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
-import { Bot } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Bot, Trash2 } from 'lucide-react'
 import { ChatBubble } from '@/components/chat/ChatBubble'
 import { ChatInput } from '@/components/chat/ChatInput'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useJuliusChat } from '@/hooks/useJuliusChat'
 import { formatCurrency } from '@/lib/utils/currency'
 import { useUserSettingsStore } from '@/stores/userSettingsStore'
 import type { TransacaoPendente } from '@/lib/types'
 
 export default function ChatPage() {
-  const { messages, isLoading, sendMessage, confirmTransaction, loadHistory } = useJuliusChat()
+  const {
+    messages,
+    isLoading,
+    isClearing,
+    sendMessage,
+    confirmTransaction,
+    clearConversation,
+    loadHistory,
+  } = useJuliusChat()
   const scrollRef = useRef<HTMLDivElement>(null)
   const chatBackgroundDataUrl = useUserSettingsStore((state) => state.chatBackgroundDataUrl)
+  const [clearDialogOpen, setClearDialogOpen] = useState(false)
+  const [clearError, setClearError] = useState<string | null>(null)
 
   useEffect(() => {
     loadHistory()
@@ -37,6 +48,17 @@ export default function ChatPage() {
     sendMessage(`Correction: ${correction}. Original data: ${t.descricao}, ${formatCurrency(t.valor)}, ${category}`)
   }
 
+  async function handleClearConversation() {
+    setClearError(null)
+    try {
+      await clearConversation()
+      setClearDialogOpen(false)
+    } catch (err) {
+      console.error('[Julius] clearConversation error:', err)
+      setClearError(err instanceof Error ? err.message : 'Could not clear the conversation. Try again.')
+    }
+  }
+
   return (
     <div
       className="relative flex h-full flex-col overflow-hidden bg-julius-bg"
@@ -52,6 +74,28 @@ export default function ChatPage() {
     >
       {chatBackgroundDataUrl && (
         <div className="pointer-events-none absolute inset-0 bg-[oklch(0.965_0.012_305_/_0.78)]" />
+      )}
+      {messages.length > 0 && (
+        <div className="relative z-10 border-b border-julius-border bg-julius-bg/95 px-4 py-2">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold text-julius-muted">Current month</p>
+              <p className="truncate text-sm font-medium text-julius-text">Expenses stay saved</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setClearError(null)
+                setClearDialogOpen(true)
+              }}
+              disabled={isLoading || isClearing}
+              className="flex min-h-11 shrink-0 items-center gap-2 rounded-2xl border border-julius-border bg-julius-card px-3 text-xs font-semibold text-julius-muted transition hover:border-julius-danger/30 hover:text-julius-danger active:scale-[0.98] disabled:opacity-45"
+            >
+              <Trash2 className="h-4 w-4 text-julius-danger" />
+              Clear chat
+            </button>
+          </div>
+        </div>
       )}
       <div ref={scrollRef} className="relative z-10 flex-1 overflow-y-auto no-scrollbar px-4 py-4">
         {messages.length === 0 && !isLoading && (
@@ -103,6 +147,22 @@ export default function ChatPage() {
       <div className="relative z-10">
         <ChatInput onSend={sendMessage} disabled={isLoading} />
       </div>
+
+      <ConfirmDialog
+        open={clearDialogOpen}
+        title="Clear this conversation?"
+        message={
+          clearError ??
+          'This clears the visible Julius chat for the current month. Saved expenses and statement records stay untouched.'
+        }
+        confirmLabel="Clear"
+        destructive
+        busy={isClearing}
+        onClose={() => {
+          if (!isClearing) setClearDialogOpen(false)
+        }}
+        onConfirm={handleClearConversation}
+      />
     </div>
   )
 }
