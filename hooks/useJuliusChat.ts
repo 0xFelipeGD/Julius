@@ -76,6 +76,7 @@ export function useJuliusChat() {
   const { timezone } = useUserSettingsStore()
   const { categories } = useCategories()
   const [isLoading, setIsLoading] = useState(false)
+  const [isClearing, setIsClearing] = useState(false)
   const supabase = createClient()
   const queryClient = useQueryClient()
 
@@ -300,5 +301,43 @@ export function useJuliusChat() {
     useAppStore.getState().setChatMessages([...updated, confirmMsg])
   }, [supabase, queryClient, categories, timezone])
 
-  return { messages: chatMessages, isLoading, sendMessage, confirmTransaction, loadHistory }
+  const clearConversation = useCallback(async (): Promise<void> => {
+    setIsClearing(true)
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) throw new Error('Session expired. Please log in again.')
+
+      const monthKey = getCurrentMonthKeyInTimezone(timezone)
+      const monthStart = getCurrentMonthStartISO(timezone)
+      const nextMonthStart = getNextMonthBoundaryISO(timezone)
+
+      const { error } = await supabase
+        .from('chat_history')
+        .delete()
+        .eq('user_id', user.id)
+        .gte('created_at', monthStart)
+        .lt('created_at', nextMonthStart)
+
+      if (error) throw error
+
+      clearPending(getPendingKey(user.id, monthKey))
+      clearLegacyPending()
+      setChatMessages([])
+      setChatHistoryKey(`${user.id}:${monthKey}`)
+    } finally {
+      setIsClearing(false)
+    }
+  }, [supabase, setChatHistoryKey, setChatMessages, timezone])
+
+  return {
+    messages: chatMessages,
+    isLoading,
+    isClearing,
+    sendMessage,
+    confirmTransaction,
+    clearConversation,
+    loadHistory,
+  }
 }
