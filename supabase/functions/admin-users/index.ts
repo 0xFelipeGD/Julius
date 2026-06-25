@@ -75,11 +75,36 @@ Deno.serve(async (req: Request) => {
       const { data, error } = await adminClient.auth.admin.listUsers()
       if (error) throw error
 
+      const userIds = data.users.map((user) => user.id)
+      const lastRecordByUser = new Map<string, { dia: string | null; hora: string | null }>()
+
+      if (userIds.length > 0) {
+        const { data: transactions, error: transactionError } = await adminClient
+          .from('transacoes')
+          .select('user_id, dia, hora, created_at')
+          .in('user_id', userIds)
+          .order('dia', { ascending: false })
+          .order('hora', { ascending: false })
+          .order('created_at', { ascending: false })
+
+        if (transactionError) throw transactionError
+
+        for (const transaction of transactions ?? []) {
+          const userId = String(transaction.user_id)
+          if (lastRecordByUser.has(userId)) continue
+          lastRecordByUser.set(userId, {
+            dia: transaction.dia ? String(transaction.dia) : null,
+            hora: transaction.hora ? String(transaction.hora) : null,
+          })
+        }
+      }
+
       const users = data.users.map((user) => ({
         id: user.id,
         email: user.email,
         created_at: user.created_at,
-        last_sign_in_at: user.last_sign_in_at,
+        last_record_date: lastRecordByUser.get(user.id)?.dia ?? null,
+        last_record_time: lastRecordByUser.get(user.id)?.hora ?? null,
         is_current_user: user.id === caller.id,
       }))
 

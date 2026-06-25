@@ -1,10 +1,10 @@
 'use client'
 
-import { AlertTriangle, Download, Landmark, X } from 'lucide-react'
+import { AlertTriangle, Landmark } from 'lucide-react'
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { useInstallPrompt } from '@/hooks/useInstallPrompt'
+import { InstallJuliusAction } from '@/components/InstallJuliusAction'
 import { useTranslation } from '@/lib/i18n'
 
 type AuthMode = 'login' | 'signup'
@@ -19,16 +19,6 @@ export default function LoginPage() {
   const [success, setSuccess] = useState('')
   const router = useRouter()
   const supabase = createClient()
-  const { canInstall, installed, install } = useInstallPrompt()
-  const [showInstallGuide, setShowInstallGuide] = useState(false)
-
-  async function handleInstallClick() {
-    if (canInstall) {
-      install()
-    } else {
-      setShowInstallGuide(true)
-    }
-  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -138,52 +128,9 @@ export default function LoginPage() {
           </button>
         </form>
       )}
-      {!installed && (
-        <div className="mt-6">
-          <button
-            type="button"
-            onClick={handleInstallClick}
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-julius-border bg-julius-raised py-3 text-sm font-medium text-julius-muted transition hover:text-julius-text active:scale-[0.98]"
-          >
-            <Download className="h-4 w-4" />
-            {t.login.installButton}
-          </button>
-        </div>
-      )}
-
-      {/* Install guide modal */}
-      {showInstallGuide && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-[rgba(38,29,52,0.42)] px-4 pb-8" onClick={() => setShowInstallGuide(false)}>
-          <div className="w-full max-w-sm rounded-[24px] border border-julius-border bg-julius-card p-5 shadow-[0_20px_60px_rgba(56,42,77,0.22)]" onClick={(e) => e.stopPropagation()}>
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-base font-semibold text-julius-text">{t.install.title}</h3>
-              <button onClick={() => setShowInstallGuide(false)} className="text-julius-muted hover:text-julius-text" aria-label="Close">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="space-y-3 text-sm text-julius-muted">
-              <div className="flex items-start gap-3">
-                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-lg bg-julius-accent text-[11px] font-bold text-julius-on-accent">1</span>
-                <p>{t.install.chromeStep1}</p>
-              </div>
-              <div className="flex items-start gap-3">
-                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-lg bg-julius-accent text-[11px] font-bold text-julius-on-accent">2</span>
-                <p>{t.install.chromeStep2}</p>
-              </div>
-              <div className="flex items-start gap-3">
-                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-lg bg-julius-accent text-[11px] font-bold text-julius-on-accent">3</span>
-                <p>{t.install.chromeStep3}</p>
-              </div>
-            </div>
-            <button
-              onClick={() => setShowInstallGuide(false)}
-              className="mt-5 w-full rounded-xl bg-julius-accent py-2.5 text-sm font-semibold text-julius-on-accent"
-            >
-              {t.install.understood}
-            </button>
-          </div>
-        </div>
-      )}
+      <div className="mt-6">
+        <InstallJuliusAction />
+      </div>
     </div>
   )
 }

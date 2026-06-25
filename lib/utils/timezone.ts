@@ -53,13 +53,62 @@ export function formatISODateInTimezone(date: Date, timezone: string): string {
   return `${get('year')}-${get('month')}-${get('day')}`
 }
 
-export function getNextMonthBoundaryISO(timezone: string, from = new Date()): string {
-  const current = getCurrentDateInTimezone(timezone)
-  const boundary = new Date(current.getFullYear(), current.getMonth() + 1, 1, 0, 0, 0)
-  if (from > boundary) {
-    return new Date(from.getFullYear(), from.getMonth() + 1, 1, 0, 0, 0).toISOString()
+function getDatePartsInTimezone(date: Date, timezone: string) {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: isValidTimezone(timezone) ? timezone : DEFAULT_TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).formatToParts(date)
+
+  const get = (type: string) => parts.find((part) => part.type === type)?.value ?? '00'
+  return {
+    year: Number(get('year')),
+    month: Number(get('month')),
+    day: Number(get('day')),
+    hour: Number(get('hour')),
+    minute: Number(get('minute')),
+    second: Number(get('second')),
   }
-  return boundary.toISOString()
+}
+
+function getTimezoneOffsetMs(date: Date, timezone: string): number {
+  const parts = getDatePartsInTimezone(date, timezone)
+  const asUtc = Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, parts.second)
+  return asUtc - date.getTime()
+}
+
+function zonedDateTimeToUtcISO(
+  timezone: string,
+  year: number,
+  monthIndex: number,
+  day: number,
+  hour = 0,
+  minute = 0,
+  second = 0
+): string {
+  const guessedUtc = new Date(Date.UTC(year, monthIndex, day, hour, minute, second))
+  const offset = getTimezoneOffsetMs(guessedUtc, timezone)
+  return new Date(guessedUtc.getTime() - offset).toISOString()
+}
+
+export function getCurrentMonthKeyInTimezone(timezone: string, from = new Date()): string {
+  const current = getDatePartsInTimezone(from, timezone)
+  return `${current.year}-${String(current.month).padStart(2, '0')}`
+}
+
+export function getCurrentMonthStartISO(timezone: string, from = new Date()): string {
+  const current = getDatePartsInTimezone(from, timezone)
+  return zonedDateTimeToUtcISO(timezone, current.year, current.month - 1, 1)
+}
+
+export function getNextMonthBoundaryISO(timezone: string, from = new Date()): string {
+  const current = getDatePartsInTimezone(from, timezone)
+  return zonedDateTimeToUtcISO(timezone, current.year, current.month, 1)
 }
 
 export function clampDayToMonth(year: number, monthIndex: number, day: number): Date {

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
+import { InstallPromptProvider } from '@/components/InstallPromptProvider'
 import './globals.css'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
@@ -38,7 +39,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.className} flex justify-center antialiased`} suppressHydrationWarning>
         <div className="relative h-dvh w-full max-w-[430px] overflow-hidden bg-julius-bg shadow-[0_24px_90px_rgba(52,39,72,0.18)] sm:my-4 sm:h-[calc(100dvh-2rem)] sm:rounded-[28px] sm:border sm:border-julius-border sm:p-2">
-          {children}
+          <InstallPromptProvider>{children}</InstallPromptProvider>
         </div>
       </body>
     </html>

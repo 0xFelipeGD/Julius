@@ -7,10 +7,15 @@ import { useAppStore } from '@/stores/appStore'
 import { useUserSettingsStore } from '@/stores/userSettingsStore'
 import { useCategories } from '@/hooks/useCategories'
 import { formatCurrency } from '@/lib/utils/currency'
-import { getNextMonthBoundaryISO } from '@/lib/utils/timezone'
+import {
+  getCurrentMonthKeyInTimezone,
+  getCurrentMonthStartISO,
+  getNextMonthBoundaryISO,
+} from '@/lib/utils/timezone'
 import type { Category, ChatMessage, JuliusChatResponse, TransacaoPendente } from '@/lib/types'
 
-const PENDING_KEY = 'julius_pending_transaction'
+const LEGACY_PENDING_KEY = 'julius_pending_transaction'
+const PENDING_PREFIX = 'julius_pending_transaction:'
 
 interface ChatHistoryRow {
   id: string
@@ -20,24 +25,34 @@ interface ChatHistoryRow {
   created_at: string
 }
 
-function savePending(transacao: TransacaoPendente) {
+function getPendingKey(userId: string, monthKey: string): string {
+  return `${PENDING_PREFIX}${userId}:${monthKey}`
+}
+
+function clearLegacyPending() {
   try {
-    localStorage.setItem(PENDING_KEY, JSON.stringify(transacao))
+    localStorage.removeItem(LEGACY_PENDING_KEY)
   } catch {}
 }
 
-function loadPending(): TransacaoPendente | null {
+function savePending(key: string, transacao: TransacaoPendente) {
   try {
-    const value = localStorage.getItem(PENDING_KEY)
+    localStorage.setItem(key, JSON.stringify(transacao))
+  } catch {}
+}
+
+function loadPending(key: string): TransacaoPendente | null {
+  try {
+    const value = localStorage.getItem(key)
     return value ? JSON.parse(value) : null
   } catch {
     return null
   }
 }
 
-function clearPending() {
+function clearPending(key: string) {
   try {
-    localStorage.removeItem(PENDING_KEY)
+    localStorage.removeItem(key)
   } catch {}
 }
 
@@ -57,7 +72,7 @@ function findCategory(categories: Category[], transacao: TransacaoPendente): Cat
 }
 
 export function useJuliusChat() {
-  const { chatMessages, setChatMessages, addChatMessage } = useAppStore()
+  const { chatMessages, chatHistoryKey, setChatMessages, setChatHistoryKey, addChatMessage } = useAppStore()
   const { timezone } = useUserSettingsStore()
   const { categories } = useCategories()
   const [isLoading, setIsLoading] = useState(false)
@@ -65,21 +80,29 @@ export function useJuliusChat() {
   const queryClient = useQueryClient()
 
   const loadHistory = useCallback(async () => {
-    if (chatMessages.length > 0) return
-
     const {
       data: { user },
     } = await supabase.auth.getUser()
     if (!user) return
 
+    const monthKey = getCurrentMonthKeyInTimezone(timezone)
+    const historyKey = `${user.id}:${monthKey}`
+    if (chatHistoryKey === historyKey && chatMessages.length > 0) return
+
     const now = new Date().toISOString()
-    await supabase.from('chat_history').delete().eq('user_id', user.id).lt('expires_at', now)
+    const monthStart = getCurrentMonthStartISO(timezone)
+    await supabase
+      .from('chat_history')
+      .delete()
+      .eq('user_id', user.id)
+      .or(`expires_at.lt.${now},created_at.lt.${monthStart}`)
 
     const { data, error } = await supabase
       .from('chat_history')
       .select('*')
       .eq('user_id', user.id)
       .or(`expires_at.is.null,expires_at.gt.${now}`)
+      .gte('created_at', monthStart)
       .order('created_at', { ascending: true })
       .limit(50)
 
@@ -96,7 +119,8 @@ export function useJuliusChat() {
       created_at: msg.created_at,
     }))
 
-    const pending = loadPending()
+    clearLegacyPending()
+    const pending = loadPending(getPendingKey(user.id, monthKey))
     if (pending) {
       const lastConfirmIdx = [...loaded].reverse().findIndex((message) => message.tipo === 'confirmacao')
       if (lastConfirmIdx >= 0) {
@@ -106,7 +130,8 @@ export function useJuliusChat() {
     }
 
     setChatMessages(loaded)
-  }, [supabase, chatMessages.length, setChatMessages])
+    setChatHistoryKey(historyKey)
+  }, [supabase, chatMessages.length, chatHistoryKey, setChatHistoryKey, setChatMessages, timezone])
 
   const sendMessage = useCallback(async (content: string) => {
     if (!content.trim()) return
@@ -135,6 +160,7 @@ export function useJuliusChat() {
       }
 
       const currentUserId = session.user.id
+      const monthKey = getCurrentMonthKeyInTimezone(timezone)
       const expiresAt = getNextMonthBoundaryISO(timezone)
 
       await supabase.from('chat_history').insert({
@@ -186,7 +212,7 @@ export function useJuliusChat() {
         transacao_pendente: data.transacao,
       }
 
-      if (data.transacao) savePending(data.transacao)
+      if (data.transacao) savePending(getPendingKey(currentUserId, monthKey), data.transacao)
 
       addChatMessage(juliusMessage)
 
@@ -251,7 +277,9 @@ export function useJuliusChat() {
 
     if (error) throw error
 
-    clearPending()
+    const monthKey = getCurrentMonthKeyInTimezone(timezone)
+    clearPending(getPendingKey(session.user.id, monthKey))
+    clearLegacyPending()
     queryClient.invalidateQueries({ queryKey: ['transactions'] })
     queryClient.invalidateQueries({ queryKey: ['stats'] })
 
@@ -270,7 +298,7 @@ export function useJuliusChat() {
         : message
     )
     useAppStore.getState().setChatMessages([...updated, confirmMsg])
-  }, [supabase, queryClient, categories])
+  }, [supabase, queryClient, categories, timezone])
 
   return { messages: chatMessages, isLoading, sendMessage, confirmTransaction, loadHistory }
 }

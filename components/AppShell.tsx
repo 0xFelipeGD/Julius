@@ -15,8 +15,6 @@ import {
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useUserSettings } from '@/hooks/useUserSettings'
-import { captureInstallPrompt } from '@/hooks/useInstallPrompt'
-import { IOSInstallHint } from '@/components/IOSInstallHint'
 
 const tabs = [
   { href: '/chat', label: 'Chat', icon: MessageCircle },
@@ -48,11 +46,6 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   const HeaderIcon = activeTab?.icon ?? MessageCircle
 
   useEffect(() => {
-    const cleanup = captureInstallPrompt()
-    return cleanup
-  }, [])
-
-  useEffect(() => {
     async function init() {
       const supabase = createClient()
       const {
@@ -65,21 +58,21 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-julius-bg sm:rounded-[20px]">
-      <header className="safe-top border-b border-julius-border bg-julius-card px-4 pb-3 pt-3 shadow-[0_10px_26px_rgba(56,42,77,0.05)]">
-        <div className="flex min-h-12 items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] bg-julius-accent-soft text-julius-accent">
+      <header className="safe-top border-b border-julius-border bg-julius-card shadow-[0_10px_26px_rgba(56,42,77,0.05)]">
+        <div className="flex h-16 items-center justify-between gap-3 px-4">
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[15px] bg-julius-accent-soft text-julius-accent">
               <HeaderIcon className="h-5 w-5" strokeWidth={2} />
             </div>
-            <div className="min-w-0">
+            <div className="flex min-w-0 flex-col justify-center">
               <p className="text-[11px] font-semibold leading-none text-julius-muted">Julius</p>
-              <h1 className="mt-1 truncate text-[19px] font-semibold leading-none text-julius-text">
+              <h1 className="mt-1 truncate text-[20px] font-semibold leading-none text-julius-text">
                 {getTabLabel(pathname)}
               </h1>
             </div>
           </div>
 
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-[14px] border border-julius-border bg-julius-raised text-julius-muted">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-[15px] border border-julius-border bg-julius-raised text-julius-muted">
             {avatarDataUrl ? (
               <img src={avatarDataUrl} alt="Account" className="h-full w-full object-cover" />
             ) : (
@@ -116,8 +109,6 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
           })}
         </div>
       </nav>
-
-      <IOSInstallHint />
     </div>
   )
 }

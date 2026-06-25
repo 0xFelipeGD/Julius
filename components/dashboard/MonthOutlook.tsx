@@ -71,19 +71,18 @@ export function MonthOutlook({ actualSpend, pendingPlanned, subscriptions, fixed
     )
   }
 
-  const projectedTotal = actualSpend + pendingPlanned
-  const spentPct = pct(actualSpend, projectedTotal)
-  const plannedPct = pct(pendingPlanned, projectedTotal)
   const plannedTotal = subscriptions.total + fixedCosts.total
   const plannedPaid = subscriptions.paid + fixedCosts.paid
   const recurringPaidPct = pct(plannedPaid, plannedTotal)
+  const paidPct = pct(plannedPaid, plannedTotal)
+  const pendingPct = pct(pendingPlanned, plannedTotal)
 
   return (
     <section className="mx-4 rounded-[22px] bg-julius-card p-4 shadow-[0_18px_42px_rgba(56,42,77,0.10)]">
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-semibold text-julius-muted">Month outlook</p>
-          <p className="mt-1 text-2xl font-semibold text-julius-text">{formatCurrency(projectedTotal)}</p>
+          <p className="mt-1 text-2xl font-semibold text-julius-text">{formatCurrency(plannedTotal)}</p>
         </div>
         <div className="text-right">
           <p className="text-xs text-julius-muted">Pending planned</p>
@@ -93,8 +92,8 @@ export function MonthOutlook({ actualSpend, pendingPlanned, subscriptions, fixed
 
       <div className="mb-4 h-2 overflow-hidden rounded-full bg-julius-border/70">
         <div className="flex h-full">
-          <div className="h-full bg-julius-success" style={{ width: `${spentPct}%` }} />
-          <div className="h-full bg-julius-accent" style={{ width: `${plannedPct}%` }} />
+          <div className="h-full bg-julius-success" style={{ width: `${paidPct}%` }} />
+          <div className="h-full bg-julius-accent" style={{ width: `${pendingPct}%` }} />
         </div>
       </div>
 
@@ -105,7 +104,7 @@ export function MonthOutlook({ actualSpend, pendingPlanned, subscriptions, fixed
         </div>
         <div className="rounded-2xl bg-julius-raised px-3 py-3">
           <p className="text-xs text-julius-muted">Projected</p>
-          <p className="mt-1 text-sm font-semibold text-julius-text">{formatCurrency(projectedTotal)}</p>
+          <p className="mt-1 text-sm font-semibold text-julius-text">{formatCurrency(plannedTotal)}</p>
         </div>
       </div>
 

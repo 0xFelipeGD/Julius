@@ -29,6 +29,7 @@ export const enGB: Translations = {
   },
   install: {
     title: 'Install Julius',
+    settingsHint: 'Add Julius to your phone home screen.',
     iosHint: 'Tap Share, then Add to Home Screen.',
     dismiss: 'Dismiss',
     chromeStep1: 'In Chrome, tap the three-dot menu in the top right.',

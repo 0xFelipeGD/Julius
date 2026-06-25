@@ -136,7 +136,7 @@ Deno.serve(async (req: Request) => {
         model: 'gpt-4o-mini',
         messages,
         max_tokens: 450,
-        temperature: 0.55,
+        temperature: 0.65,
         response_format: { type: 'json_object' },
       }),
     })

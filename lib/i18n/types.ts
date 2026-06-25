@@ -27,6 +27,7 @@ export interface Translations {
   }
   install: {
     title: string
+    settingsHint: string
     iosHint: string
     dismiss: string
     chromeStep1: string

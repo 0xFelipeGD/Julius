@@ -3,6 +3,7 @@
 import { ImagePlus, LogOut, Plus, Shield, Trash2, UserRound, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { CategoryIcon, CATEGORY_ICON_OPTIONS } from '@/components/CategoryIcon'
+import { InstallJuliusAction } from '@/components/InstallJuliusAction'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useCategories } from '@/hooks/useCategories'
 import { useUserSettings } from '@/hooks/useUserSettings'
@@ -117,7 +118,8 @@ interface AuthUserSummary {
   id: string
   email?: string
   created_at?: string
-  last_sign_in_at?: string
+  last_record_date?: string | null
+  last_record_time?: string | null
 }
 
 interface AdminUserSummary extends AuthUserSummary {
@@ -130,6 +132,13 @@ function formatDateTime(value?: string): string {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value))
+}
+
+function formatRecordDate(date?: string | null, time?: string | null): string {
+  if (!date) return 'No records'
+  const [year, month, day] = date.split('-')
+  if (!year || !month || !day) return date
+  return `${day}/${month}/${year}${time ? `, ${time.slice(0, 5)}` : ''}`
 }
 
 function SettingsSection({ title, children }: { title: string; children: React.ReactNode }) {
@@ -370,7 +379,6 @@ function AccountSection() {
           id: currentUser.id,
           email: currentUser.email ?? undefined,
           created_at: currentUser.created_at,
-          last_sign_in_at: currentUser.last_sign_in_at,
         })
       }
     }
@@ -595,6 +603,8 @@ function AccountSection() {
           </div>
         </label>
 
+        <InstallJuliusAction variant="row" />
+
         <div className="grid grid-cols-2 gap-3 pt-1">
           <button
             onClick={handleLogout}
@@ -765,7 +775,9 @@ function AdminPanel() {
             <div key={user.id} className="flex items-center gap-3 rounded-2xl bg-julius-raised px-3 py-3">
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-julius-text">{user.email ?? user.id}</p>
-                <p className="text-xs text-julius-muted">Last sign-in: {formatDateTime(user.last_sign_in_at)}</p>
+                <p className="text-xs text-julius-muted">
+                  Last record: {formatRecordDate(user.last_record_date, user.last_record_time)}
+                </p>
               </div>
               <button
                 onClick={() => handleDelete(user)}
