@@ -1,17 +1,13 @@
 'use client'
 
-import { useTranslation } from '@/lib/i18n'
-
 interface SearchBarProps {
   value: string
   onChange: (v: string) => void
 }
 
 export function SearchBar({ value, onChange }: SearchBarProps) {
-  const t = useTranslation()
-
   return (
-    <div className="relative px-4 pb-2">
+    <div className="relative min-w-0 flex-1">
       <div className="relative">
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -27,8 +23,8 @@ export function SearchBar({ value, onChange }: SearchBarProps) {
           type="text"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          placeholder={t.extrato.search}
-          className="w-full rounded-xl border border-julius-border bg-julius-card pl-9 pr-4 py-2 text-sm text-julius-text placeholder:text-julius-muted focus:border-julius-accent focus:outline-none"
+          placeholder="Search"
+          className="h-11 w-full rounded-xl border border-julius-border bg-julius-card py-2 pl-9 pr-4 text-sm text-julius-text placeholder:text-julius-muted focus:border-julius-accent focus:outline-none"
         />
         {value && (
           <button

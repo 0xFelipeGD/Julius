@@ -1,47 +1,57 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { CATEGORIES, getCategoryLabel } from '@/lib/categories'
-import { useTranslation } from '@/lib/i18n'
-import { useUserSettingsStore } from '@/stores/userSettingsStore'
-import { getRegionConfig } from '@/lib/config/regions'
-import type { Transacao, Tag } from '@/lib/types'
+import { Trash2, X } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { getCategoryDisplay } from '@/lib/categories'
+import type { Category, Transacao } from '@/lib/types'
 
 interface EditTransactionModalProps {
   transaction: Transacao | null
-  onSave: (id: string, updates: { valor: number; tag: Tag; descricao: string; dia: string }) => void
+  categories: Category[]
+  onSave: (id: string, updates: { valor: number; category_id: string; descricao: string; dia: string }) => void
   onDelete: (id: string) => void
   onClose: () => void
 }
 
-export function EditTransactionModal({ transaction, onSave, onDelete, onClose }: EditTransactionModalProps) {
-  const t = useTranslation()
-  const region = useUserSettingsStore((s) => s.region)
-  const locale = region ? getRegionConfig(region).locale : 'pt-PT'
-  const [valor, setValor] = useState('')
-  const [tag, setTag] = useState<Tag>('Outros')
-  const [descricao, setDescricao] = useState('')
-  const [dia, setDia] = useState('')
+export function EditTransactionModal({ transaction, categories, onSave, onDelete, onClose }: EditTransactionModalProps) {
+  const [amount, setAmount] = useState('')
+  const [categoryId, setCategoryId] = useState('')
+  const [description, setDescription] = useState('')
+  const [date, setDate] = useState('')
   const [saving, setSaving] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
 
   useEffect(() => {
-    if (transaction) {
-      setValor(String(transaction.valor))
-      setTag(transaction.tag)
-      setDescricao(transaction.descricao)
-      setDia(transaction.dia)
-    }
-  }, [transaction])
+    if (!transaction) return
+    const display = getCategoryDisplay(transaction.category, transaction.tag)
+    const fallbackCategory = categories.find((category) => category.id === transaction.category_id)
+      ?? categories.find((category) => category.name === display.name)
+      ?? categories.find((category) => category.is_fallback)
+      ?? categories[0]
+
+    setAmount(String(transaction.valor))
+    setCategoryId(fallbackCategory?.id ?? transaction.category_id ?? '')
+    setDescription(transaction.descricao)
+    setDate(transaction.dia)
+  }, [transaction, categories])
 
   if (!transaction) return null
+  const activeTransaction = transaction
 
   async function handleSave() {
     if (saving) return
-    const v = parseFloat(valor.replace(',', '.'))
-    if (isNaN(v) || v <= 0 || !descricao.trim() || !dia) return
+    const parsedAmount = parseFloat(amount.replace(',', '.'))
+    if (Number.isNaN(parsedAmount) || parsedAmount <= 0 || !description.trim() || !date || !categoryId) return
+
     setSaving(true)
     try {
-      onSave(transaction!.id, { valor: v, tag, descricao: descricao.trim(), dia })
+      onSave(activeTransaction.id, {
+        valor: parsedAmount,
+        category_id: categoryId,
+        descricao: description.trim(),
+        dia: date,
+      })
       onClose()
     } finally {
       setSaving(false)
@@ -49,116 +59,115 @@ export function EditTransactionModal({ transaction, onSave, onDelete, onClose }:
   }
 
   function handleDelete() {
-    onDelete(transaction!.id)
+    setDeleteOpen(true)
+  }
+
+  function confirmDelete() {
+    onDelete(activeTransaction.id)
+    setDeleteOpen(false)
     onClose()
   }
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col justify-end">
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
+      <div className="absolute inset-0 bg-[rgba(38,29,52,0.42)]" onClick={onClose} />
 
-      {/* Sheet */}
-      <div className="relative flex max-h-[90dvh] flex-col rounded-t-2xl bg-julius-card">
-        {/* Handle + Header — fixo no topo */}
-        <div className="shrink-0 px-4 pt-4 pb-3">
+      <div className="relative flex max-h-[90dvh] flex-col rounded-t-[28px] bg-julius-card shadow-[0_-20px_60px_rgba(56,42,77,0.22)]">
+        <div className="shrink-0 px-4 pb-3 pt-4">
           <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-julius-border" />
           <div className="flex items-center justify-between">
-            <h2 className="text-base font-semibold text-julius-text">{t.extrato.editTitle}</h2>
+            <h2 className="text-base font-semibold text-julius-text">Edit transaction</h2>
             <button
               onClick={onClose}
-              className="flex h-8 w-8 items-center justify-center rounded-full text-julius-muted hover:text-julius-text"
+              className="flex h-9 w-9 items-center justify-center rounded-xl text-julius-muted transition hover:bg-julius-raised hover:text-julius-text"
+              aria-label="Close"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="h-5 w-5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
-              </svg>
+              <X className="h-5 w-5" />
             </button>
           </div>
         </div>
 
-        {/* Campos — scroll se necessário */}
         <div className="flex-1 overflow-y-auto px-4 pb-2">
           <div className="space-y-4">
-            {/* Descrição */}
-            <div>
-              <label className="mb-1.5 block text-xs font-medium text-julius-muted">{t.extrato.descriptionLabel}</label>
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-medium text-julius-muted">Description</span>
               <input
                 type="text"
-                value={descricao}
-                onChange={(e) => setDescricao(e.target.value)}
-                className="w-full rounded-xl border border-julius-border bg-julius-bg px-3 py-2.5 text-sm text-julius-text placeholder:text-julius-muted focus:border-julius-accent focus:outline-none"
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+                className="w-full rounded-xl border border-julius-border bg-julius-raised px-3 py-2.5 text-sm text-julius-text focus:border-julius-accent focus:outline-none"
               />
-            </div>
+            </label>
 
-            {/* Valor */}
-            <div>
-              <label className="mb-1.5 block text-xs font-medium text-julius-muted">{t.extrato.amountLabel}</label>
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-medium text-julius-muted">Amount</span>
               <input
                 type="number"
                 inputMode="decimal"
                 step="0.01"
                 min="0"
-                value={valor}
-                onChange={(e) => setValor(e.target.value)}
-                className="w-full rounded-xl border border-julius-border bg-julius-bg px-3 py-2.5 text-sm text-julius-text placeholder:text-julius-muted focus:border-julius-accent focus:outline-none"
+                value={amount}
+                onChange={(event) => setAmount(event.target.value)}
+                className="w-full rounded-xl border border-julius-border bg-julius-raised px-3 py-2.5 text-sm text-julius-text focus:border-julius-accent focus:outline-none"
               />
-            </div>
+            </label>
 
-            {/* Categoria */}
-            <div>
-              <label className="mb-1.5 block text-xs font-medium text-julius-muted">{t.extrato.categoryLabel}</label>
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-medium text-julius-muted">Category</span>
               <div className="relative">
                 <select
-                  value={tag}
-                  onChange={(e) => setTag(e.target.value as Tag)}
-                  className="w-full appearance-none rounded-xl border border-julius-border bg-julius-bg px-3 py-2.5 text-sm text-julius-text focus:border-julius-accent focus:outline-none cursor-pointer"
+                  value={categoryId}
+                  onChange={(event) => setCategoryId(event.target.value)}
+                  className="w-full appearance-none rounded-xl border border-julius-border bg-julius-raised px-3 py-2.5 text-sm text-julius-text focus:border-julius-accent focus:outline-none"
                 >
-                  {CATEGORIES.map((c) => (
-                    <option key={c.value} value={c.value}>{getCategoryLabel(c.value, locale)}</option>
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
                   ))}
                 </select>
-                <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
-                  <svg className="h-4 w-4 text-julius-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </div>
+                <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-julius-muted">⌄</span>
               </div>
-            </div>
+            </label>
 
-            {/* Data */}
-            <div>
-              <label className="mb-1.5 block text-xs font-medium text-julius-muted">{t.extrato.dateLabel}</label>
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-medium text-julius-muted">Date</span>
               <input
                 type="date"
-                value={dia}
-                onChange={(e) => setDia(e.target.value)}
-                className="w-full rounded-xl border border-julius-border bg-julius-bg px-3 py-2.5 text-sm text-julius-text focus:border-julius-accent focus:outline-none"
-                style={{ colorScheme: 'dark' }}
+                value={date}
+                onChange={(event) => setDate(event.target.value)}
+                className="w-full rounded-xl border border-julius-border bg-julius-raised px-3 py-2.5 text-sm text-julius-text focus:border-julius-accent focus:outline-none"
               />
-            </div>
+            </label>
           </div>
         </div>
 
-        {/* Botões — fixo no fundo */}
-        <div className="safe-bottom shrink-0 flex gap-3 border-t border-julius-border px-4 py-3">
+        <div className="safe-bottom flex shrink-0 gap-3 border-t border-julius-border px-4 py-3">
           <button
             onClick={handleDelete}
-            className="flex items-center justify-center gap-2 rounded-xl border border-julius-danger px-4 py-3 text-sm font-medium text-julius-danger active:opacity-70"
+            className="flex items-center justify-center gap-2 rounded-xl border border-julius-danger/30 bg-julius-danger-soft px-4 py-3 text-sm font-medium text-julius-danger transition active:scale-[0.98]"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-4 w-4">
-              <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
-            </svg>
-            {t.extrato.deleteLabel}
+            <Trash2 className="h-4 w-4" />
+            Delete
           </button>
           <button
             onClick={handleSave}
-            disabled={saving || !descricao.trim() || !valor || !dia}
-            className="flex-1 rounded-xl bg-julius-accent py-3 text-sm font-medium text-white disabled:opacity-50 active:opacity-80"
+            disabled={saving || !description.trim() || !amount || !date || !categoryId}
+            className="flex-1 rounded-xl bg-julius-accent py-3 text-sm font-medium text-julius-on-accent transition active:scale-[0.98] disabled:opacity-45"
           >
-            {saving ? t.extrato.savingLabel : t.extrato.saveLabel}
+            {saving ? 'Saving...' : 'Save'}
           </button>
         </div>
       </div>
+      <ConfirmDialog
+        open={deleteOpen}
+        title="Delete transaction?"
+        message="This transaction will be removed from your statement."
+        confirmLabel="Delete"
+        destructive
+        onClose={() => setDeleteOpen(false)}
+        onConfirm={confirmDelete}
+      />
     </div>
   )
 }

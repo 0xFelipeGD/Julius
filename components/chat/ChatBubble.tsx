@@ -1,10 +1,6 @@
-import type { ChatMessage } from '@/lib/types'
+import type { ChatMessage, TransacaoPendente } from '@/lib/types'
 import { TransactionConfirm } from './TransactionConfirm'
-import type { TransacaoPendente } from '@/lib/types'
-import { useTranslation } from '@/lib/i18n'
-import { useUserSettingsStore } from '@/stores/userSettingsStore'
-import { getRegionConfig } from '@/lib/config/regions'
-import { getPersona, getPersonaImage } from '@/lib/prompts'
+import { Bot } from 'lucide-react'
 
 interface ChatBubbleProps {
   message: ChatMessage
@@ -13,34 +9,29 @@ interface ChatBubbleProps {
 }
 
 export function ChatBubble({ message, onConfirm, onCorrect }: ChatBubbleProps) {
-  const t = useTranslation()
-  const { region, persona } = useUserSettingsStore()
-  const personaConfig = getPersona(persona)
-  const personaImage = getPersonaImage(personaConfig.id)
-  const dateLocale = region ? getRegionConfig(region).dateLocale : 'pt-PT'
   const isUser = message.role === 'user'
-  const time = new Date(message.created_at).toLocaleTimeString(dateLocale, {
+  const time = new Date(message.created_at).toLocaleTimeString('en-GB', {
     hour: '2-digit',
     minute: '2-digit',
   })
 
   return (
-    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-3`}>
+    <div className={`mb-4 flex ${isUser ? 'justify-end' : 'justify-start'}`}>
       {!isUser && (
-        <div className="mr-2 flex h-8 w-8 shrink-0 overflow-hidden rounded-full">
-          <img src={personaImage} alt={personaConfig.name} className="h-full w-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = '/personas/julius.png' }} />
+        <div className="mr-2 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-julius-accent-soft text-julius-accent">
+          <Bot className="h-4 w-4" strokeWidth={1.9} />
         </div>
       )}
-      <div className={`max-w-[80%]`}>
+      <div className="max-w-[82%]">
         <div
-          className={`rounded-2xl px-4 py-2.5 ${
+          className={`rounded-2xl px-4 py-2.5 shadow-[0_10px_28px_rgba(56,42,77,0.08)] ${
             isUser
-              ? 'rounded-br-md bg-julius-accent text-white'
+              ? 'rounded-br-md bg-julius-accent text-julius-on-accent'
               : 'rounded-bl-md bg-julius-card text-julius-text'
           }`}
         >
-          <p className="text-sm leading-relaxed whitespace-pre-wrap">
-            {message.content || t.chat.fallbackError}
+          <p className="whitespace-pre-wrap text-sm leading-relaxed">
+            {message.content || 'Julius had trouble reading that.'}
           </p>
         </div>
         {message.transacao_pendente && onConfirm && onCorrect && (
@@ -52,7 +43,7 @@ export function ChatBubble({ message, onConfirm, onCorrect }: ChatBubbleProps) {
             />
           </div>
         )}
-        <p className={`mt-1 text-xs text-julius-muted ${isUser ? 'text-right' : 'text-left'}`}>
+        <p className={`mt-1 text-[11px] text-julius-muted ${isUser ? 'text-right' : 'text-left'}`}>
           {time}
         </p>
       </div>

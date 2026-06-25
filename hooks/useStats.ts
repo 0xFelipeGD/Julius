@@ -2,8 +2,8 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
-import { ALL_TAGS } from '@/lib/categories'
-import type { Periodo, Tag, DayStats } from '@/lib/types'
+import { getCategoryDisplay } from '@/lib/categories'
+import type { Periodo, DayStats, Transacao } from '@/lib/types'
 
 function getCalendarDays(periodo: Periodo, year: number, month?: number): number {
   if (month !== undefined && month !== null) {
@@ -29,7 +29,7 @@ function getCalendarDays(periodo: Periodo, year: number, month?: number): number
     case 'mes': {
       const firstDay = new Date(year, now.getMonth(), 1)
       const lastDay = new Date(year, now.getMonth() + 1, 0)
-      const end = today < lastDay ? today : lastDay
+      const end = year === now.getFullYear() && today < lastDay ? today : lastDay
       return Math.floor((end.getTime() - firstDay.getTime()) / (1000 * 60 * 60 * 24)) + 1
     }
 
@@ -37,14 +37,14 @@ function getCalendarDays(periodo: Periodo, year: number, month?: number): number
       const q = Math.floor(now.getMonth() / 3) * 3
       const firstDay = new Date(year, q, 1)
       const lastDay = new Date(year, q + 3, 0)
-      const end = today < lastDay ? today : lastDay
+      const end = year === now.getFullYear() && today < lastDay ? today : lastDay
       return Math.floor((end.getTime() - firstDay.getTime()) / (1000 * 60 * 60 * 24)) + 1
     }
 
     case 'total': {
       const firstDay = new Date(year, 0, 1)
       const lastDay = new Date(year, 11, 31)
-      const end = today < lastDay ? today : lastDay
+      const end = year === now.getFullYear() && today < lastDay ? today : lastDay
       return Math.floor((end.getTime() - firstDay.getTime()) / (1000 * 60 * 60 * 24)) + 1
     }
   }
@@ -114,45 +114,46 @@ function fillMissingDays(stats: DayStats[], from: string, to: string): DayStats[
     filled.push(existing.get(iso) ?? {
       dia: iso,
       total: 0,
-      por_categoria: Object.fromEntries(ALL_TAGS.map(t => [t, 0])) as Record<Tag, number>,
+      por_categoria: {},
     })
     current.setDate(current.getDate() + 1)
   }
   return filled
 }
 
-export function useStats(periodo: Periodo, tag?: Tag, year?: number, month?: number) {
+export function useStats(periodo: Periodo, categoryId?: string, year?: number, month?: number) {
   const supabase = createClient()
   const effectiveYear = year ?? new Date().getFullYear()
 
   return useQuery<{ dayStats: DayStats[]; total: number; average: number }>({
-    queryKey: ['stats', periodo, tag, effectiveYear, month],
+    queryKey: ['stats', periodo, categoryId, effectiveYear, month],
     queryFn: async () => {
       const { from, to } = getPeriodRange(periodo, effectiveYear, month)
       let query = supabase
         .from('transacoes')
-        .select('*')
+        .select('*, category:user_categories(*)')
         .gte('dia', from)
         .lte('dia', to)
         .order('dia', { ascending: true })
 
-      if (tag) query = query.eq('tag', tag)
+      if (categoryId) query = query.eq('category_id', categoryId)
 
       const { data, error } = await query
       if (error) throw error
 
-      const transactions = data ?? []
+      const transactions = (data ?? []) as Transacao[]
 
-      const grouped = new Map<string, Map<Tag, number>>()
+      const grouped = new Map<string, Map<string, number>>()
       for (const t of transactions) {
         if (!grouped.has(t.dia)) grouped.set(t.dia, new Map())
         const dayMap = grouped.get(t.dia)!
-        dayMap.set(t.tag as Tag, (dayMap.get(t.tag as Tag) ?? 0) + Number(t.valor))
+        const categoryKey = t.category_id ?? getCategoryDisplay(t.category, t.tag).id
+        dayMap.set(categoryKey, (dayMap.get(categoryKey) ?? 0) + Number(t.valor))
       }
 
       const dayStats: DayStats[] = Array.from(grouped.entries()).map(([dia, catMap]) => {
-        const por_categoria = {} as Record<Tag, number>
-        for (const cat of ALL_TAGS) por_categoria[cat] = catMap.get(cat) ?? 0
+        const por_categoria: Record<string, number> = {}
+        for (const [cat, amount] of catMap.entries()) por_categoria[cat] = amount
         const total = Array.from(catMap.values()).reduce((a, b) => a + b, 0)
         return { dia, total, por_categoria }
       })

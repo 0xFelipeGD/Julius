@@ -3,79 +3,51 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import {
+  ChartNoAxesColumnIncreasing,
+  CircleUserRound,
+  House,
+  ListChecks,
+  MessageCircle,
+  Repeat2,
+  Settings,
+} from 'lucide-react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useUserSettings } from '@/hooks/useUserSettings'
-import { useUserSettingsStore } from '@/stores/userSettingsStore'
 import { captureInstallPrompt } from '@/hooks/useInstallPrompt'
-import { JuliusLightbox } from '@/components/JuliusLightbox'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { IOSInstallHint } from '@/components/IOSInstallHint'
-import { getPersona, getPersonaImage } from '@/lib/prompts'
 
 const tabs = [
-  {
-    href: '/chat',
-    label: 'Chat',
-    icon: (active: boolean) => (
-      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className={`h-5 w-5 transition-colors ${active ? 'text-julius-accent' : 'text-julius-muted'}`}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
-      </svg>
-    ),
-  },
-  {
-    href: '/dashboard',
-    label: 'Dashboard',
-    icon: (active: boolean) => (
-      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className={`h-5 w-5 transition-colors ${active ? 'text-julius-accent' : 'text-julius-muted'}`}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M3 3v18h18" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M18 17V9M13 17V5M8 17v-3" />
-      </svg>
-    ),
-  },
-  {
-    href: '/extrato',
-    label: 'Extrato',
-    icon: (active: boolean) => (
-      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className={`h-5 w-5 transition-colors ${active ? 'text-julius-accent' : 'text-julius-muted'}`}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M14 2v4a2 2 0 0 0 2 2h4M10 9H8M16 13H8M16 17H8" />
-      </svg>
-    ),
-  },
-  {
-    href: '/settings',
-    label: 'Config',
-    icon: (active: boolean) => (
-      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className={`h-5 w-5 transition-colors ${active ? 'text-julius-accent' : 'text-julius-muted'}`}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
-        <circle cx="12" cy="12" r="3" />
-      </svg>
-    ),
-  },
+  { href: '/chat', label: 'Chat', icon: MessageCircle },
+  { href: '/dashboard', label: 'Stats', icon: ChartNoAxesColumnIncreasing },
+  { href: '/subscriptions', label: 'Subs', icon: Repeat2 },
+  { href: '/fixed-costs', label: 'Fixed', icon: House },
+  { href: '/extrato', label: 'List', icon: ListChecks },
+  { href: '/settings', label: 'Me', icon: Settings },
 ]
 
 function getTabLabel(pathname: string): string {
   if (pathname.startsWith('/chat')) return 'Chat'
   if (pathname.startsWith('/dashboard')) return 'Dashboard'
-  if (pathname.startsWith('/extrato')) return 'Extrato'
-  if (pathname === '/settings/region') return 'Region'
-  if (pathname === '/settings/persona') return 'Persona'
-  if (pathname === '/settings/receipt') return 'Receipt Photos'
-  if (pathname === '/settings/limits') return 'Spend Limits'
+  if (pathname.startsWith('/subscriptions')) return 'Subscriptions'
+  if (pathname.startsWith('/fixed-costs')) return 'Fixed costs'
+  if (pathname.startsWith('/extrato')) return 'Statement'
   if (pathname.startsWith('/settings')) return 'Settings'
   return 'Julius'
 }
 
+function getActiveTab(pathname: string) {
+  return tabs.find((tab) => pathname.startsWith(tab.href))
+}
+
 function AppShellInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const [lightboxOpen, setLightboxOpen] = useState(false)
-  const { loadSettings } = useUserSettings()
-  const persona = useUserSettingsStore((s) => s.persona)
-  const personaConfig = getPersona(persona)
-  const personaImage = getPersonaImage(personaConfig.id)
+  const { avatarDataUrl, loadSettings } = useUserSettings()
+  const activeTab = getActiveTab(pathname)
+  const HeaderIcon = activeTab?.icon ?? MessageCircle
 
   useEffect(() => {
-    // Capture beforeinstallprompt early so it's available on any page
     const cleanup = captureInstallPrompt()
     return cleanup
   }, [])
@@ -86,57 +58,66 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
       const {
         data: { user },
       } = await supabase.auth.getUser()
-      if (user) {
-        await loadSettings()
-      }
+      if (user) await loadSettings()
     }
     init()
   }, [loadSettings])
 
   return (
-    <div className="flex h-dvh flex-col">
-      {/* Header */}
-      <header className="safe-top flex items-center justify-between border-b border-julius-border bg-julius-bg px-4 pb-3 pt-3">
-        <h1 className="text-base font-semibold tracking-tight text-julius-text">
-          {getTabLabel(pathname)}
-        </h1>
-        <button
-          onClick={() => setLightboxOpen(true)}
-          className="flex h-8 w-8 shrink-0 overflow-hidden rounded-full ring-2 ring-julius-border hover:ring-julius-accent transition-all active:scale-95"
-          aria-label={personaConfig.name}
-        >
-          <img src={personaImage} alt={personaConfig.name} className="h-full w-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = '/personas/julius.png' }} />
-        </button>
+    <div className="flex h-full flex-col overflow-hidden bg-julius-bg sm:rounded-[20px]">
+      <header className="safe-top border-b border-julius-border bg-julius-card px-4 pb-3 pt-3 shadow-[0_10px_26px_rgba(56,42,77,0.05)]">
+        <div className="flex min-h-12 items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] bg-julius-accent-soft text-julius-accent">
+              <HeaderIcon className="h-5 w-5" strokeWidth={2} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold leading-none text-julius-muted">Julius</p>
+              <h1 className="mt-1 truncate text-[19px] font-semibold leading-none text-julius-text">
+                {getTabLabel(pathname)}
+              </h1>
+            </div>
+          </div>
+
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-[14px] border border-julius-border bg-julius-raised text-julius-muted">
+            {avatarDataUrl ? (
+              <img src={avatarDataUrl} alt="Account" className="h-full w-full object-cover" />
+            ) : (
+              <CircleUserRound className="h-5 w-5" strokeWidth={1.9} />
+            )}
+          </div>
+        </div>
       </header>
 
       <main className="flex-1 overflow-y-auto no-scrollbar">
         {children}
       </main>
 
-      {/* Nav */}
-      <nav className="safe-bottom flex items-center border-t border-julius-border bg-julius-bg px-1 pt-1 pb-1">
-        {tabs.map((tab) => {
-          const isActive = pathname.startsWith(tab.href)
-          return (
-            <Link
-              key={tab.href}
-              href={tab.href}
-              className="relative flex flex-1 flex-col items-center gap-0.5 py-2"
-            >
-              {isActive && (
-                <span className="absolute top-0 left-1/2 h-0.5 w-8 -translate-x-1/2 rounded-full bg-julius-accent" />
-              )}
-              {tab.icon(isActive)}
-              <span className={`text-[10px] font-medium transition-colors ${isActive ? 'text-julius-accent' : 'text-julius-muted'}`}>
-                {tab.label}
-              </span>
-            </Link>
-          )
-        })}
+      <nav className="safe-bottom border-t border-julius-border bg-julius-card px-1.5 pb-1.5 pt-1.5">
+        <div className="grid grid-cols-6 gap-0.5">
+          {tabs.map((tab) => {
+            const Icon = tab.icon
+            const isActive = pathname.startsWith(tab.href)
+            return (
+              <Link
+                key={tab.href}
+                href={tab.href}
+                aria-current={isActive ? 'page' : undefined}
+                className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl px-0.5 text-[10px] font-medium transition duration-200 active:scale-[0.98] ${
+                  isActive
+                    ? 'bg-julius-accent-soft text-julius-accent'
+                    : 'text-julius-muted hover:bg-julius-raised hover:text-julius-text'
+                }`}
+              >
+                <Icon className="h-5 w-5" strokeWidth={isActive ? 2.2 : 1.8} />
+                <span className="w-full truncate text-center">{tab.label}</span>
+              </Link>
+            )
+          })}
+        </div>
       </nav>
 
       <IOSInstallHint />
-      <JuliusLightbox open={lightboxOpen} onClose={() => setLightboxOpen(false)} />
     </div>
   )
 }

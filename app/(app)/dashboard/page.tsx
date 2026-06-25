@@ -1,83 +1,140 @@
 'use client'
 
-import { useState } from 'react'
-import { PeriodFilter } from '@/components/dashboard/PeriodFilter'
-import { StatsCards } from '@/components/dashboard/StatsCards'
-import { SpendingChart } from '@/components/dashboard/SpendingChart'
+import { useMemo, useState } from 'react'
 import { CategoryBreakdown } from '@/components/dashboard/CategoryBreakdown'
-import { BudgetProgress } from '@/components/dashboard/BudgetProgress'
+import { MonthOutlook } from '@/components/dashboard/MonthOutlook'
+import { MonthlyTrend } from '@/components/dashboard/MonthlyTrend'
+import { PeriodFilter } from '@/components/dashboard/PeriodFilter'
+import { SpendingChart } from '@/components/dashboard/SpendingChart'
+import { StatsCards } from '@/components/dashboard/StatsCards'
+import { useCategories } from '@/hooks/useCategories'
+import { useMonthlyTrend } from '@/hooks/useMonthlyTrend'
 import { useStats } from '@/hooks/useStats'
-import { CATEGORIES, getCategoryLabel } from '@/lib/categories'
+import { getMonthStart, useSubscriptions } from '@/hooks/useSubscriptions'
 import { useAppStore } from '@/stores/appStore'
-import { useTranslation } from '@/lib/i18n'
-import { useUserSettingsStore } from '@/stores/userSettingsStore'
-import { getRegionConfig } from '@/lib/config/regions'
-import type { Periodo, Tag } from '@/lib/types'
+import type { Periodo, RecurringExpense } from '@/lib/types'
+import type { DueAlert } from '@/components/dashboard/MonthOutlook'
+
+function formatDueLabel(dueDate: Date): string {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const due = new Date(dueDate)
+  due.setHours(0, 0, 0, 0)
+  const days = Math.round((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+
+  if (days < 0) return 'overdue'
+  if (days === 0) return 'today'
+  if (days === 1) return 'tomorrow'
+  return `in ${days} days`
+}
+
+function buildDueAlerts(
+  expenses: RecurringExpense[],
+  getDueDate: (paymentDay: number) => Date,
+  type: string
+): DueAlert[] {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const horizon = new Date(today)
+  horizon.setDate(horizon.getDate() + 7)
+
+  return expenses
+    .filter((expense) => expense.current_payment && expense.current_payment.status !== 'paid')
+    .map((expense) => {
+      const dueDate = getDueDate(expense.payment_day)
+      return {
+        id: `${type}-${expense.id}`,
+        label: expense.description,
+        type,
+        amount: Number(expense.amount),
+        dueDate,
+        dueLabel: formatDueLabel(dueDate),
+      }
+    })
+    .filter((alert) => alert.dueDate <= horizon)
+    .sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime())
+}
 
 export default function DashboardPage() {
-  const t = useTranslation()
-  const region = useUserSettingsStore((s) => s.region)
-  const locale = region ? getRegionConfig(region).locale : 'pt-PT'
   const [periodo, setPeriodo] = useState<Periodo>('mes')
-  const [tag, setTag] = useState<Tag | 'all'>('all')
+  const [categoryId, setCategoryId] = useState<string>('all')
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null)
-  const year = useAppStore((s) => s.selectedYear)
+  const year = useAppStore((state) => state.selectedYear)
+  const { categories } = useCategories()
+  const forecastMonth = selectedMonth !== null ? getMonthStart(year, selectedMonth) : undefined
+  const subscriptionForecast = useSubscriptions('subscription', forecastMonth)
+  const fixedCostForecast = useSubscriptions('fixed_cost', forecastMonth)
+  const monthlyTrend = useMonthlyTrend(year, categoryId === 'all' ? undefined : categoryId)
 
-  const { data, isLoading } = useStats(periodo, tag === 'all' ? undefined : tag, year, selectedMonth ?? undefined)
+  const { data, isLoading } = useStats(
+    periodo,
+    categoryId === 'all' ? undefined : categoryId,
+    year,
+    selectedMonth ?? undefined
+  )
+  const monthStats = useStats('mes', categoryId === 'all' ? undefined : categoryId, year, selectedMonth ?? undefined)
+  const dueAlerts = useMemo(() => {
+    const now = new Date()
+    const isCurrentMonth = selectedMonth === null || (year === now.getFullYear() && selectedMonth === now.getMonth())
+    if (!isCurrentMonth) return []
 
-  const MONTHS = Array.from({ length: 12 }, (_, i) => {
-    const name = new Intl.DateTimeFormat(locale, { month: 'long' }).format(new Date(2024, i, 1))
+    return [
+      ...buildDueAlerts(subscriptionForecast.expenses, subscriptionForecast.getDueDate, 'Subscription'),
+      ...buildDueAlerts(fixedCostForecast.expenses, fixedCostForecast.getDueDate, 'Fixed cost'),
+    ].sort((a, b) => {
+      if (a.dueLabel === 'overdue' && b.dueLabel !== 'overdue') return -1
+      if (b.dueLabel === 'overdue' && a.dueLabel !== 'overdue') return 1
+      return 0
+    })
+  }, [fixedCostForecast.expenses, fixedCostForecast.getDueDate, selectedMonth, subscriptionForecast.expenses, subscriptionForecast.getDueDate, year])
+
+  const months = Array.from({ length: 12 }, (_, index) => {
+    const name = new Intl.DateTimeFormat('en-GB', { month: 'long' }).format(new Date(2024, index, 1))
     return name.charAt(0).toUpperCase() + name.slice(1)
   })
 
-  function handlePeriodChange(p: Periodo) {
-    setPeriodo(p)
+  function handlePeriodChange(nextPeriod: Periodo) {
+    setPeriodo(nextPeriod)
     setSelectedMonth(null)
   }
 
   return (
-    <div className="pb-4">
-      <div className="flex flex-col gap-2 px-4 py-3">
-        {/* Linha 1: período + categoria */}
-        <div className="flex gap-3">
-          <div className="flex-1">
-            <PeriodFilter selected={periodo} onChange={handlePeriodChange} dimmed={selectedMonth !== null} />
-          </div>
-          <div className="relative flex-1">
+    <div className="pb-5">
+      <div className="px-4 py-4">
+        <div className="grid grid-cols-[1fr_1.05fr_1fr] gap-2">
+          <PeriodFilter selected={periodo} onChange={handlePeriodChange} dimmed={selectedMonth !== null} />
+          <div className="relative min-w-0">
             <select
-              value={tag}
-              onChange={(e) => setTag(e.target.value as Tag | 'all')}
-              className="w-full appearance-none bg-julius-card text-julius-text border border-julius-border rounded-xl px-3 py-2.5 text-sm font-medium focus:outline-none focus:border-julius-accent cursor-pointer"
+              value={categoryId}
+              onChange={(event) => setCategoryId(event.target.value)}
+              className="h-11 w-full appearance-none rounded-xl border border-julius-border bg-julius-card px-3 py-2.5 pr-8 text-xs font-medium text-julius-text transition focus:border-julius-accent focus:outline-none"
             >
-              <option value="all">{t.dashboard.allCategories}</option>
-              {CATEGORIES.map((c) => (
-                <option key={c.value} value={c.value}>{getCategoryLabel(c.value, locale)}</option>
+              <option value="all">All</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
               ))}
             </select>
-            <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
-              <svg className="h-4 w-4 text-julius-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </div>
+            <span className="pointer-events-none absolute inset-y-0 right-2.5 flex items-center text-julius-muted">⌄</span>
           </div>
-        </div>
 
-        {/* Linha 2: mês específico (full width) */}
-        <div className="relative">
-          <select
-            value={selectedMonth ?? ''}
-            onChange={(e) => setSelectedMonth(e.target.value === '' ? null : Number(e.target.value))}
-            className={`w-full appearance-none bg-julius-card text-julius-text border border-julius-border rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:border-julius-accent cursor-pointer transition-opacity ${selectedMonth === null ? 'opacity-40' : ''}`}
-          >
-            <option value="">— Mês específico —</option>
-            {MONTHS.map((name, i) => (
-              <option key={i} value={i}>{name} {year}</option>
-            ))}
-          </select>
-          <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
-            <svg className="h-4 w-4 text-julius-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
+          <div className="relative min-w-0">
+            <select
+              value={selectedMonth ?? ''}
+              onChange={(event) => setSelectedMonth(event.target.value === '' ? null : Number(event.target.value))}
+              className={`h-11 w-full appearance-none rounded-xl border border-julius-border bg-julius-card px-3 py-2.5 pr-8 text-xs font-medium text-julius-text transition focus:border-julius-accent focus:outline-none ${
+                selectedMonth === null ? 'text-julius-muted' : ''
+              }`}
+            >
+              <option value="">Current</option>
+              {months.map((name, index) => (
+                <option key={name} value={index}>
+                  {name} {year}
+                </option>
+              ))}
+            </select>
+            <span className="pointer-events-none absolute inset-y-0 right-2.5 flex items-center text-julius-muted">⌄</span>
           </div>
         </div>
       </div>
@@ -89,9 +146,31 @@ export default function DashboardPage() {
       />
 
       <div className="mt-4 space-y-4">
-        <BudgetProgress tag={tag} />
-        <SpendingChart data={data?.dayStats ?? []} isLoading={isLoading} />
-        <CategoryBreakdown data={data?.dayStats ?? []} isLoading={isLoading} />
+        <SpendingChart data={data?.dayStats ?? []} categories={categories} isLoading={isLoading} />
+        <CategoryBreakdown data={data?.dayStats ?? []} categories={categories} isLoading={isLoading} />
+        <div className="px-4 pt-3">
+          <div className="flex items-center gap-3">
+            <div className="h-px flex-1 bg-julius-border" />
+            <p className="text-xs font-semibold text-julius-muted">Planning</p>
+            <div className="h-px flex-1 bg-julius-border" />
+          </div>
+        </div>
+        <MonthOutlook
+          actualSpend={monthStats.data?.total ?? 0}
+          pendingPlanned={subscriptionForecast.projection.pending + fixedCostForecast.projection.pending}
+          subscriptions={subscriptionForecast.projection}
+          fixedCosts={fixedCostForecast.projection}
+          dueAlerts={dueAlerts}
+          isLoading={monthStats.isLoading || subscriptionForecast.isLoading || fixedCostForecast.isLoading}
+        />
+        <div className="px-4 pt-3">
+          <div className="flex items-center gap-3">
+            <div className="h-px flex-1 bg-julius-border" />
+            <p className="text-xs font-semibold text-julius-muted">Review</p>
+            <div className="h-px flex-1 bg-julius-border" />
+          </div>
+        </div>
+        <MonthlyTrend data={monthlyTrend.data ?? []} isLoading={monthlyTrend.isLoading} year={year} />
       </div>
     </div>
   )

@@ -1,10 +1,8 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { CATEGORIES, getCategoryLabel } from '@/lib/categories'
-import { getCalendarDays } from '@/lib/utils/period'
-import type { Transacao, Periodo, Currency, Locale } from '@/lib/types'
+import { DEFAULT_CATEGORIES, getCategoryDisplay } from '@/lib/categories'
 import { formatCurrency } from '@/lib/utils/currency'
-import type { Translations } from '@/lib/i18n/types'
+import type { Category, Currency, Periodo, Transacao } from '@/lib/types'
 
 interface ReportData {
   transactions: Transacao[]
@@ -13,170 +11,194 @@ interface ReportData {
   currency: Currency
   total: number
   average: number
-  locale?: Locale
-  translations?: Translations
   periodLabel?: string
+  categories?: Category[]
+}
+
+function hexToRgb(hexValue: string): [number, number, number] {
+  const hex = hexValue.replace('#', '')
+  return [
+    parseInt(hex.substring(0, 2), 16),
+    parseInt(hex.substring(2, 4), 16),
+    parseInt(hex.substring(4, 6), 16),
+  ]
+}
+
+function getCategoryName(transaction: Transacao): string {
+  return getCategoryDisplay(transaction.category, transaction.tag).name
 }
 
 export function generateReport(data: ReportData): jsPDF {
-  const { transactions, periodo, year, currency, total, average, locale = 'pt-PT', translations, periodLabel } = data
-  const tr = translations
-  const periodoLabels: Record<Periodo, string> = tr?.pdf.periods ?? {
-    hoje: 'Hoje', semana: 'Semana', mes: 'Mês', trimestre: 'Trimestre', total: 'Ano',
+  const { transactions, periodo, year, currency, total, average, periodLabel, categories = [] } = data
+  const periodLabels: Record<Periodo, string> = {
+    hoje: 'Today',
+    semana: 'Week',
+    mes: 'Month',
+    trimestre: 'Quarter',
+    total: 'Year',
   }
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
 
-  const PAGE_W = 210
-  const MARGIN = 15
-  const CONTENT_W = PAGE_W - MARGIN * 2
+  const pageWidth = 210
+  const margin = 15
+  const contentWidth = pageWidth - margin * 2
+  const bg: [number, number, number] = [248, 246, 250]
+  const card: [number, number, number] = [255, 253, 255]
+  const border: [number, number, number] = [222, 216, 226]
+  const text: [number, number, number] = [45, 37, 55]
+  const muted: [number, number, number] = [111, 101, 124]
+  const accent: [number, number, number] = [93, 45, 136]
 
-  // Colors (RGB)
-  const BG_DARK: [number, number, number] = [2, 6, 23]       // #020617 slate-950
-  const BG_CARD: [number, number, number] = [30, 41, 59]     // #1E293B slate-800
-  const TEXT_WHITE: [number, number, number] = [248, 250, 252]
-  const TEXT_MUTED: [number, number, number] = [148, 163, 184]
-  const ACCENT: [number, number, number] = [37, 99, 235]
+  doc.setFillColor(...bg)
+  doc.rect(0, 0, pageWidth, 297, 'F')
 
-  // Background
-  doc.setFillColor(...BG_DARK)
-  doc.rect(0, 0, PAGE_W, 297, 'F')
-
-  // Header
   let y = 20
-  doc.setTextColor(...ACCENT)
+  doc.setTextColor(...accent)
   doc.setFontSize(24)
   doc.setFont('helvetica', 'bold')
-  doc.text('JULIUS', MARGIN, y)
+  doc.text('JULIUS', margin, y)
 
   doc.setFontSize(10)
-  doc.setTextColor(...TEXT_MUTED)
+  doc.setTextColor(...muted)
   doc.setFont('helvetica', 'normal')
-  doc.text(tr?.pdf.subtitle ?? 'Relatório Financeiro', MARGIN, y + 7)
+  doc.text('Financial statement', margin, y + 7)
   doc.text(
-    `${periodLabel ?? periodoLabels[periodo]}${!periodLabel && periodo === 'total' ? ` ${year}` : ''} · ${tr?.pdf.generatedAt ?? 'Gerado a'} ${new Date().toLocaleDateString(locale)}`,
-    MARGIN,
+    `${periodLabel ?? periodLabels[periodo]}${!periodLabel && periodo === 'total' ? ` ${year}` : ''} · Generated on ${new Date().toLocaleDateString('en-GB')}`,
+    margin,
     y + 13
   )
 
-  // Summary cards
   y = 50
-  const cardW = (CONTENT_W - 8) / 3
+  const cardWidth = (contentWidth - 8) / 3
   const cards = [
-    { label: tr?.pdf.total ?? 'Total', value: formatCurrency(total, currency, locale) },
-    { label: tr?.pdf.dailyAverage ?? 'Média Diária', value: formatCurrency(average, currency, locale) },
-    { label: tr?.pdf.transactions ?? 'Transações', value: String(transactions.length) },
+    { label: 'Total', value: formatCurrency(total, currency) },
+    { label: 'Daily average', value: formatCurrency(average, currency) },
+    { label: 'Transactions', value: String(transactions.length) },
   ]
 
-  cards.forEach((card, i) => {
-    const x = MARGIN + i * (cardW + 4)
-    doc.setFillColor(...BG_CARD)
-    doc.roundedRect(x, y, cardW, 20, 2, 2, 'F')
+  cards.forEach((item, index) => {
+    const x = margin + index * (cardWidth + 4)
+    doc.setFillColor(...card)
+    doc.setDrawColor(...border)
+    doc.roundedRect(x, y, cardWidth, 20, 2, 2, 'FD')
     doc.setFontSize(8)
-    doc.setTextColor(...TEXT_MUTED)
-    doc.text(card.label, x + 4, y + 6)
+    doc.setTextColor(...muted)
+    doc.text(item.label, x + 4, y + 6)
     doc.setFontSize(11)
-    doc.setTextColor(...TEXT_WHITE)
+    doc.setTextColor(...text)
     doc.setFont('helvetica', 'bold')
-    doc.text(card.value, x + 4, y + 14)
+    doc.text(item.value, x + 4, y + 14)
     doc.setFont('helvetica', 'normal')
   })
 
-  // Category breakdown
   y = 80
   doc.setFontSize(10)
-  doc.setTextColor(...TEXT_WHITE)
+  doc.setTextColor(...text)
   doc.setFont('helvetica', 'bold')
-  doc.text(tr?.pdf.byCategory ?? 'Por Categoria', MARGIN, y)
-  y += 5
+  doc.text('By category', margin, y)
+  y += 6
 
-  // Group transactions by category
-  const byCategory = new Map<string, number>()
-  for (const t of transactions) {
-    byCategory.set(t.tag, (byCategory.get(t.tag) ?? 0) + Number(t.valor))
+  const byCategory = new Map<string, { label: string; amount: number; color: string }>()
+  for (const transaction of transactions) {
+    const display = getCategoryDisplay(transaction.category, transaction.tag)
+    const key = transaction.category_id ?? display.id
+    const existing = byCategory.get(key) ?? { label: display.name, amount: 0, color: display.color }
+    existing.amount += Number(transaction.valor)
+    byCategory.set(key, existing)
   }
 
-  const LABEL_W = 28
-  const VALUE_W = 38
-  const BAR_X = MARGIN + LABEL_W + 3
-  const maxBar = CONTENT_W - LABEL_W - VALUE_W - 6
+  for (const category of categories) {
+    if (!byCategory.has(category.id)) {
+      byCategory.set(category.id, { label: category.name, amount: 0, color: category.color })
+    }
+  }
 
-  for (const cat of CATEGORIES) {
-    const amount = byCategory.get(cat.value) ?? 0
-    if (amount === 0) continue
-    const pct = total > 0 ? amount / total : 0
-    const barW = Math.max(pct * maxBar, 1)
+  for (const defaultCategory of DEFAULT_CATEGORIES) {
+    if (!byCategory.has(defaultCategory.value)) {
+      byCategory.set(defaultCategory.value, {
+        label: defaultCategory.name,
+        amount: 0,
+        color: defaultCategory.color,
+      })
+    }
+  }
 
-    // Parse hex color to RGB
-    const hex = cat.color.replace('#', '')
-    const r = parseInt(hex.substring(0, 2), 16)
-    const g = parseInt(hex.substring(2, 4), 16)
-    const b = parseInt(hex.substring(4, 6), 16)
+  const categoryRows = Array.from(byCategory.values())
+    .filter((entry) => entry.amount > 0)
+    .sort((a, b) => b.amount - a.amount)
 
-    // Label (no emoji — jsPDF doesn't support them)
+  const labelWidth = 34
+  const valueWidth = 38
+  const barX = margin + labelWidth + 3
+  const maxBar = contentWidth - labelWidth - valueWidth - 6
+
+  for (const entry of categoryRows) {
+    const pct = total > 0 ? entry.amount / total : 0
+    const barWidth = Math.max(pct * maxBar, 1)
+    const rgb = hexToRgb(entry.color)
+
     doc.setFontSize(8)
-    doc.setTextColor(...TEXT_MUTED)
-    doc.text(getCategoryLabel(cat.value, locale), MARGIN, y + 3.5)
+    doc.setTextColor(...muted)
+    doc.text(entry.label.slice(0, 24), margin, y + 3.5)
 
-    // Bar
-    doc.setFillColor(r, g, b)
-    doc.roundedRect(BAR_X, y, barW, 4, 1, 1, 'F')
+    doc.setFillColor(...rgb)
+    doc.roundedRect(barX, y, barWidth, 4, 1, 1, 'F')
 
-    // Value + pct (right-aligned)
-    doc.setTextColor(...TEXT_MUTED)
+    doc.setTextColor(...muted)
     doc.text(
-      `${formatCurrency(amount, currency)} (${Math.round(pct * 100)}%)`,
-      PAGE_W - MARGIN,
+      `${formatCurrency(entry.amount, currency)} (${Math.round(pct * 100)}%)`,
+      pageWidth - margin,
       y + 3.5,
       { align: 'right' }
     )
     y += 10
   }
 
-  // Transaction table
   y += 5
   autoTable(doc, {
     startY: y,
-    head: [[tr?.extrato.dateLabel ?? 'Dia', tr?.extrato.descriptionLabel ?? 'Descrição', tr?.extrato.categoryLabel ?? 'Categoria', tr?.pdf.total ?? 'Valor']],
-    body: transactions.map((t) => {
-      const [yr, mo, day] = t.dia.split('-')
+    head: [['Date', 'Description', 'Category', 'Amount']],
+    body: transactions.map((transaction) => {
+      const [yr, mo, day] = transaction.dia.split('-')
       return [
         `${day}/${mo}/${yr}`,
-        t.descricao,
-        getCategoryLabel(t.tag, locale),
-        formatCurrency(Number(t.valor), currency, locale),
+        transaction.descricao,
+        getCategoryName(transaction),
+        formatCurrency(Number(transaction.valor), currency),
       ]
     }),
     styles: {
-      fillColor: BG_CARD,
-      textColor: TEXT_WHITE,
+      fillColor: card,
+      textColor: text,
       fontSize: 8,
       cellPadding: 3,
+      lineColor: border,
+      lineWidth: 0.1,
     },
     headStyles: {
-      fillColor: ACCENT,
-      textColor: [255, 255, 255],
+      fillColor: accent,
+      textColor: [255, 253, 255],
       fontStyle: 'bold',
     },
     alternateRowStyles: {
-      fillColor: [15, 23, 42],
+      fillColor: [245, 242, 247],
     },
     columnStyles: {
-      0: { cellWidth: 22 },
+      0: { cellWidth: 24 },
       3: { halign: 'right', cellWidth: 30 },
     },
-    margin: { left: MARGIN, right: MARGIN },
+    margin: { left: margin, right: margin },
   })
 
-  // Footer
   const pageCount = doc.getNumberOfPages()
-  for (let i = 1; i <= pageCount; i++) {
-    doc.setPage(i)
-    doc.setFillColor(...BG_DARK)
-    doc.rect(0, 285, PAGE_W, 12, 'F')
+  for (let page = 1; page <= pageCount; page++) {
+    doc.setPage(page)
+    doc.setFillColor(...bg)
+    doc.rect(0, 285, pageWidth, 12, 'F')
     doc.setFontSize(7)
-    doc.setTextColor(...TEXT_MUTED)
-    doc.text(`${tr?.pdf.footer ?? 'Gerado pelo Julius'} · ${new Date().toLocaleDateString(locale)}`, MARGIN, 291)
-    doc.text(`${i}/${pageCount}`, PAGE_W - MARGIN, 291, { align: 'right' })
+    doc.setTextColor(...muted)
+    doc.text(`Generated by Julius · ${new Date().toLocaleDateString('en-GB')}`, margin, 291)
+    doc.text(`${page}/${pageCount}`, pageWidth - margin, 291, { align: 'right' })
   }
 
   return doc

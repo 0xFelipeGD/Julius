@@ -1,4 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="8" fill="#0F172A"/>
-  <text x="16" y="23" font-family="Arial Black, Arial, sans-serif" font-size="20" font-weight="900" text-anchor="middle" fill="#2563EB">J</text>
+  <rect width="32" height="32" rx="8" fill="#f3f0f5"/>
+  <circle cx="16" cy="16" r="11" fill="#5d2d88"/>
+  <text x="16" y="22" font-family="Arial, sans-serif" font-size="15" font-weight="700" text-anchor="middle" fill="#fbf8fd">€</text>
 </svg>

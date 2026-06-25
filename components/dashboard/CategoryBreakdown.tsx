@@ -1,92 +1,92 @@
 'use client'
 
-import { PieChart, Pie, Cell } from 'recharts'
-import { CATEGORIES, getCategoryLabel } from '@/lib/categories'
+import { Cell, Pie, PieChart } from 'recharts'
 import { formatCurrency } from '@/lib/utils/currency'
-import { useUserSettingsStore } from '@/stores/userSettingsStore'
-import { useTranslation } from '@/lib/i18n'
-import { getRegionConfig } from '@/lib/config/regions'
-import type { DayStats } from '@/lib/types'
+import type { Category, DayStats } from '@/lib/types'
 
 interface CategoryBreakdownProps {
   data: DayStats[]
+  categories: Category[]
   isLoading: boolean
 }
 
-export function CategoryBreakdown({ data, isLoading }: CategoryBreakdownProps) {
-  const t = useTranslation()
-  const currency = useUserSettingsStore((s) => s.currency)
-  const region = useUserSettingsStore((s) => s.region)
-  const locale = region ? getRegionConfig(region).locale : 'pt-PT'
-
+export function CategoryBreakdown({ data, categories, isLoading }: CategoryBreakdownProps) {
   if (isLoading) {
     return (
-      <div className="mx-4 flex h-[140px] items-center justify-center rounded-xl bg-julius-card">
-        <p className="text-sm text-julius-muted">{t.dashboard.calculating}</p>
+      <div className="mx-4 h-[178px] rounded-[22px] bg-julius-card p-4">
+        <div className="mb-5 h-4 w-24 animate-pulse rounded bg-julius-border" />
+        <div className="flex items-center gap-4">
+          <div className="h-24 w-24 animate-pulse rounded-full bg-julius-border" />
+          <div className="flex-1 space-y-3">
+            <div className="h-3 w-full animate-pulse rounded bg-julius-border" />
+            <div className="h-3 w-4/5 animate-pulse rounded bg-julius-border" />
+            <div className="h-3 w-3/5 animate-pulse rounded bg-julius-border" />
+          </div>
+        </div>
       </div>
     )
   }
 
-  const totals: Record<string, number> = {}
+  const totals = new Map<string, number>()
   for (const day of data) {
-    for (const [cat, val] of Object.entries(day.por_categoria)) {
-      totals[cat] = (totals[cat] ?? 0) + (val as number)
+    for (const [categoryId, value] of Object.entries(day.por_categoria)) {
+      totals.set(categoryId, (totals.get(categoryId) ?? 0) + Number(value))
     }
   }
 
-  const total = Object.values(totals).reduce((a, b) => a + b, 0)
-  if (total === 0) return null
+  const total = Array.from(totals.values()).reduce((sum, value) => sum + value, 0)
+  if (total <= 0) return null
 
-  const pieData = CATEGORIES
-    .map((cat) => ({ key: cat.value, label: getCategoryLabel(cat.value, locale), amount: totals[cat.value] ?? 0, color: cat.color }))
-    .filter((d) => d.amount > 0)
+  const pieData = categories
+    .map((category) => ({
+      key: category.id,
+      label: category.name,
+      amount: totals.get(category.id) ?? 0,
+      color: category.color,
+    }))
+    .filter((entry) => entry.amount > 0)
     .sort((a, b) => b.amount - a.amount)
 
   return (
-    <div className="mx-4 rounded-xl bg-julius-card p-4">
-      <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-julius-muted">
-        {t.dashboard.byCategory}
-      </p>
+    <section className="mx-4 rounded-[22px] bg-julius-card p-4 shadow-[0_18px_42px_rgba(56,42,77,0.10)]">
+      <p className="mb-4 text-xs font-semibold text-julius-muted">By category</p>
       <div className="flex items-center gap-4">
-        {/* Donut */}
         <div className="shrink-0">
-          <PieChart width={110} height={110}>
+          <PieChart width={112} height={112}>
             <Pie
               data={pieData}
-              cx={50}
-              cy={50}
-              innerRadius={32}
-              outerRadius={50}
+              cx={56}
+              cy={56}
+              innerRadius={34}
+              outerRadius={52}
               dataKey="amount"
               strokeWidth={0}
             >
-              {pieData.map((entry, i) => (
-                <Cell key={i} fill={entry.color} />
+              {pieData.map((entry) => (
+                <Cell key={entry.key} fill={entry.color} />
               ))}
             </Pie>
           </PieChart>
         </div>
 
-        {/* Lista com mini barras */}
-        <div className="flex-1 space-y-2.5 min-w-0">
-          {pieData.map((d) => {
-            const pct = Math.round((d.amount / total) * 100)
+        <div className="min-w-0 flex-1 space-y-2.5">
+          {pieData.map((entry) => {
+            const percentage = Math.round((entry.amount / total) * 100)
             return (
-              <div key={d.key}>
-                <div className="mb-1 flex items-center justify-between">
+              <div key={entry.key}>
+                <div className="mb-1 flex items-center justify-between gap-2">
                   <div className="flex min-w-0 items-center gap-1.5">
-                    <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: d.color }} />
-                    <span className="truncate text-xs text-julius-muted">{d.label}</span>
+                    <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: entry.color }} />
+                    <span className="truncate text-xs text-julius-muted">{entry.label}</span>
                   </div>
-                  <span className="ml-2 shrink-0 text-xs font-medium text-julius-text">
-                    {formatCurrency(d.amount, currency)}{' '}
-                    <span className="text-julius-muted">{pct}%</span>
+                  <span className="shrink-0 text-xs font-medium text-julius-text">
+                    {formatCurrency(entry.amount)} <span className="text-julius-muted">{percentage}%</span>
                   </span>
                 </div>
-                <div className="h-1 w-full overflow-hidden rounded-full bg-julius-border">
+                <div className="h-1.5 overflow-hidden rounded-full bg-julius-border/70">
                   <div
                     className="h-full rounded-full"
-                    style={{ width: `${pct}%`, backgroundColor: d.color }}
+                    style={{ width: `${percentage}%`, backgroundColor: entry.color }}
                   />
                 </div>
               </div>
@@ -94,6 +94,6 @@ export function CategoryBreakdown({ data, isLoading }: CategoryBreakdownProps) {
           })}
         </div>
       </div>
-    </div>
+    </section>
   )
 }

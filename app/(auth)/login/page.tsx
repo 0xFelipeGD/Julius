@@ -1,5 +1,6 @@
 'use client'
 
+import { AlertTriangle, Download, Landmark, X } from 'lucide-react'
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
@@ -60,22 +61,21 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="w-full max-w-sm">
-      <div className="mb-10 text-center">
-        <div className="mx-auto mb-4 h-20 w-20 overflow-hidden rounded-full ring-4 ring-julius-border animate-pulse">
-          <img src="/personas/julius.png" alt="Julius" className="h-full w-full object-cover" />
+    <div className="w-full max-w-sm px-1 py-8">
+      <div className="mb-8 text-center">
+        <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-[22px] bg-julius-accent-soft text-julius-accent">
+          <Landmark className="h-9 w-9" strokeWidth={1.8} />
         </div>
-        <h1 className="text-3xl font-bold text-julius-text">JULIUS</h1>
+        <h1 className="text-3xl font-semibold text-julius-text">Julius</h1>
         <p className="mt-1 text-sm text-julius-muted">{t.login.subtitle}</p>
       </div>
 
-      {/* Tabs */}
-      <div className="mb-6 flex rounded-xl overflow-hidden border border-julius-border">
+      <div className="mb-6 grid grid-cols-2 border-b border-julius-border">
         <button
           type="button"
           onClick={() => { setMode('login'); setError(''); setSuccess('') }}
-          className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
-            mode === 'login' ? 'bg-julius-accent text-white' : 'bg-julius-card text-julius-muted'
+          className={`border-b-2 py-3 text-sm font-medium transition ${
+            mode === 'login' ? 'border-julius-accent text-julius-text' : 'border-transparent text-julius-muted'
           }`}
         >
           {t.login.loginTab}
@@ -83,8 +83,8 @@ export default function LoginPage() {
         <button
           type="button"
           onClick={() => { setMode('signup'); setError(''); setSuccess('') }}
-          className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
-            mode === 'signup' ? 'bg-julius-accent text-white' : 'bg-julius-card text-julius-muted'
+          className={`border-b-2 py-3 text-sm font-medium transition ${
+            mode === 'signup' ? 'border-julius-accent text-julius-text' : 'border-transparent text-julius-muted'
           }`}
         >
           {t.login.signupTab}
@@ -109,7 +109,7 @@ export default function LoginPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            className="w-full rounded-xl border border-julius-border bg-julius-card px-4 py-3 text-julius-text placeholder:text-julius-muted focus:border-julius-accent focus:outline-none"
+            className="w-full rounded-xl border border-julius-border bg-julius-raised px-4 py-3 text-julius-text placeholder:text-julius-muted focus:border-julius-accent focus:outline-none"
           />
 
           <input
@@ -119,14 +119,12 @@ export default function LoginPage() {
             onChange={(e) => setPassword(e.target.value)}
             required
             minLength={6}
-            className="w-full rounded-xl border border-julius-border bg-julius-card px-4 py-3 text-julius-text placeholder:text-julius-muted focus:border-julius-accent focus:outline-none"
+            className="w-full rounded-xl border border-julius-border bg-julius-raised px-4 py-3 text-julius-text placeholder:text-julius-muted focus:border-julius-accent focus:outline-none"
           />
 
           {error && (
-            <div className="flex items-center gap-2 rounded-lg bg-julius-card border border-julius-danger/30 px-3 py-2">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-4 w-4 shrink-0 text-julius-danger">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
-              </svg>
+            <div className="flex items-center gap-2 rounded-xl border border-julius-danger/30 bg-julius-danger-soft px-3 py-2">
+              <AlertTriangle className="h-4 w-4 shrink-0 text-julius-danger" />
               <p className="text-sm text-julius-danger">{error}</p>
             </div>
           )}
@@ -134,7 +132,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading || !email || !password}
-            className="w-full rounded-xl bg-julius-accent py-3 font-semibold text-white transition-opacity disabled:opacity-50"
+            className="w-full rounded-xl bg-julius-accent py-3 font-semibold text-julius-on-accent transition active:scale-[0.98] disabled:opacity-50"
           >
             {loading ? t.login.processing : mode === 'login' ? t.login.loginButton : t.login.signupButton}
           </button>
@@ -145,11 +143,9 @@ export default function LoginPage() {
           <button
             type="button"
             onClick={handleInstallClick}
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-julius-border bg-julius-card py-3 text-sm font-medium text-julius-muted transition-colors hover:border-julius-accent hover:text-julius-text active:opacity-80"
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-julius-border bg-julius-raised py-3 text-sm font-medium text-julius-muted transition hover:text-julius-text active:scale-[0.98]"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-4 w-4">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
-            </svg>
+            <Download className="h-4 w-4" />
             {t.login.installButton}
           </button>
         </div>
@@ -157,33 +153,31 @@ export default function LoginPage() {
 
       {/* Install guide modal */}
       {showInstallGuide && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 px-4 pb-8" onClick={() => setShowInstallGuide(false)}>
-          <div className="w-full max-w-sm rounded-2xl bg-julius-card border border-julius-border p-5" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-[rgba(38,29,52,0.42)] px-4 pb-8" onClick={() => setShowInstallGuide(false)}>
+          <div className="w-full max-w-sm rounded-[24px] border border-julius-border bg-julius-card p-5 shadow-[0_20px_60px_rgba(56,42,77,0.22)]" onClick={(e) => e.stopPropagation()}>
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-base font-semibold text-julius-text">{t.install.title}</h3>
-              <button onClick={() => setShowInstallGuide(false)} className="text-julius-muted hover:text-julius-text">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="h-5 w-5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
-                </svg>
+              <button onClick={() => setShowInstallGuide(false)} className="text-julius-muted hover:text-julius-text" aria-label="Close">
+                <X className="h-5 w-5" />
               </button>
             </div>
             <div className="space-y-3 text-sm text-julius-muted">
               <div className="flex items-start gap-3">
-                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-julius-accent text-[11px] font-bold text-white">1</span>
+                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-lg bg-julius-accent text-[11px] font-bold text-julius-on-accent">1</span>
                 <p>{t.install.chromeStep1}</p>
               </div>
               <div className="flex items-start gap-3">
-                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-julius-accent text-[11px] font-bold text-white">2</span>
+                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-lg bg-julius-accent text-[11px] font-bold text-julius-on-accent">2</span>
                 <p>{t.install.chromeStep2}</p>
               </div>
               <div className="flex items-start gap-3">
-                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-julius-accent text-[11px] font-bold text-white">3</span>
+                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-lg bg-julius-accent text-[11px] font-bold text-julius-on-accent">3</span>
                 <p>{t.install.chromeStep3}</p>
               </div>
             </div>
             <button
               onClick={() => setShowInstallGuide(false)}
-              className="mt-5 w-full rounded-xl bg-julius-accent py-2.5 text-sm font-semibold text-white"
+              className="mt-5 w-full rounded-xl bg-julius-accent py-2.5 text-sm font-semibold text-julius-on-accent"
             >
               {t.install.understood}
             </button>

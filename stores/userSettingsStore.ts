@@ -1,44 +1,40 @@
 import { create } from 'zustand'
-import { ALL_TAGS } from '@/lib/categories'
-import type { Currency, Tag, Limites, RegionCode } from '@/lib/types'
-
-function getStoredRegion(): RegionCode | null {
-  if (typeof window === 'undefined') return null
-  return (localStorage.getItem('julius_region') as RegionCode) || null
-}
+import type { Currency } from '@/lib/types'
+import { DEFAULT_CURRENCY } from '@/lib/utils/currency'
+import { DEFAULT_TIMEZONE, getBrowserTimezone } from '@/lib/utils/timezone'
 
 interface UserSettingsState {
-  region: RegionCode | null
   currency: Currency
-  enabledCategories: Tag[]
-  limites: Limites
-  persona: string | null
-  receiptPhotosEnabled: boolean
+  timezone: string
+  avatarDataUrl: string | null
+  chatBackgroundDataUrl: string | null
   loaded: boolean
 
-  setRegion: (r: RegionCode) => void
-  setCurrency: (c: Currency) => void
-  setEnabledCategories: (cats: Tag[]) => void
-  setLimites: (l: Limites) => void
-  setPersona: (p: string | null) => void
-  setReceiptPhotosEnabled: (v: boolean) => void
-  setLoaded: (v: boolean) => void
+  setCurrency: (currency: Currency) => void
+  setTimezone: (timezone: string) => void
+  setAvatarDataUrl: (avatarDataUrl: string | null) => void
+  setChatBackgroundDataUrl: (chatBackgroundDataUrl: string | null) => void
+  setLoaded: (loaded: boolean) => void
+}
+
+function getInitialTimezone(): string {
+  if (typeof window === 'undefined') return DEFAULT_TIMEZONE
+  return localStorage.getItem('julius_timezone') || getBrowserTimezone()
 }
 
 export const useUserSettingsStore = create<UserSettingsState>((set) => ({
-  region: getStoredRegion(),
-  currency: 'EUR',
-  enabledCategories: ALL_TAGS,
-  limites: {},
-  persona: null,
-  receiptPhotosEnabled: false,
+  currency: DEFAULT_CURRENCY,
+  timezone: getInitialTimezone(),
+  avatarDataUrl: null,
+  chatBackgroundDataUrl: null,
   loaded: false,
 
-  setRegion: (region) => set({ region }),
   setCurrency: (currency) => set({ currency }),
-  setEnabledCategories: (enabledCategories) => set({ enabledCategories }),
-  setLimites: (limites) => set({ limites }),
-  setPersona: (persona) => set({ persona }),
-  setReceiptPhotosEnabled: (receiptPhotosEnabled) => set({ receiptPhotosEnabled }),
+  setTimezone: (timezone) => {
+    if (typeof window !== 'undefined') localStorage.setItem('julius_timezone', timezone)
+    set({ timezone })
+  },
+  setAvatarDataUrl: (avatarDataUrl) => set({ avatarDataUrl }),
+  setChatBackgroundDataUrl: (chatBackgroundDataUrl) => set({ chatBackgroundDataUrl }),
   setLoaded: (loaded) => set({ loaded }),
 }))

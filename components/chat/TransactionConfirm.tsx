@@ -1,13 +1,12 @@
 'use client'
 
+import { Check, PencilLine } from 'lucide-react'
 import { useState } from 'react'
+import { CategoryIcon } from '@/components/CategoryIcon'
+import { useCategories } from '@/hooks/useCategories'
+import { getCategoryDisplay } from '@/lib/categories'
 import { formatCurrency } from '@/lib/utils/currency'
-import { useUserSettingsStore } from '@/stores/userSettingsStore'
-import { CATEGORY_EMOJIS, CATEGORY_BG } from '@/lib/categories'
-import { getCategoryLabel } from '@/lib/categories'
-import { useTranslation } from '@/lib/i18n'
-import { getRegionConfig } from '@/lib/config/regions'
-import type { TransacaoPendente } from '@/lib/types'
+import type { Category, TransacaoPendente } from '@/lib/types'
 
 interface TransactionConfirmProps {
   transacao: TransacaoPendente
@@ -15,70 +14,86 @@ interface TransactionConfirmProps {
   onCorrect: (t: TransacaoPendente, correction: string) => void
 }
 
+function findCategory(categories: Category[], transacao: TransacaoPendente): Category | null {
+  return (
+    categories.find((category) => category.id === transacao.category_id) ??
+    categories.find((category) => category.name.toLowerCase() === transacao.category_name?.toLowerCase()) ??
+    categories.find((category) => category.legacy_tag === transacao.tag) ??
+    categories.find((category) => category.is_fallback) ??
+    null
+  )
+}
+
 export function TransactionConfirm({ transacao, onConfirm, onCorrect }: TransactionConfirmProps) {
-  const t = useTranslation()
   const [correcting, setCorrecting] = useState(false)
   const [correction, setCorrection] = useState('')
   const [confirming, setConfirming] = useState(false)
-  const currency = useUserSettingsStore((s) => s.currency)
-  const region = useUserSettingsStore((s) => s.region)
-  const locale = region ? getRegionConfig(region).locale : 'pt-PT'
+  const { categories } = useCategories()
+  const category = findCategory(categories, transacao)
+  const display = getCategoryDisplay(category, transacao.tag)
 
   function handleCorrect() {
-    if (correction.trim()) {
-      onCorrect(transacao, correction.trim())
-      setCorrecting(false)
-      setCorrection('')
-    }
+    if (!correction.trim()) return
+    onCorrect(transacao, correction.trim())
+    setCorrecting(false)
+    setCorrection('')
   }
 
   async function handleConfirm() {
     if (confirming) return
     setConfirming(true)
     try {
-      await onConfirm(transacao)
+      await onConfirm({
+        ...transacao,
+        category_id: category?.id ?? transacao.category_id,
+        category_name: category?.name ?? transacao.category_name ?? display.name,
+        tag: category?.legacy_tag ?? transacao.tag,
+      })
     } finally {
       setConfirming(false)
     }
   }
 
   return (
-    <div className="rounded-xl border border-julius-border bg-julius-card p-4">
+    <div className="rounded-2xl border border-julius-border bg-julius-card p-4 shadow-[0_16px_36px_rgba(56,42,77,0.10)]">
       <div className="mb-3 flex items-center gap-3">
-        <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${CATEGORY_BG[transacao.tag]}`}>
-          <span className="text-lg">{CATEGORY_EMOJIS[transacao.tag]}</span>
+        <div
+          className="flex h-11 w-11 items-center justify-center rounded-2xl text-lg"
+          style={{ backgroundColor: `${display.color}22`, color: display.color }}
+        >
+          <CategoryIcon icon={display.icon} className="h-5 w-5" />
         </div>
-        <div className="flex-1">
-          <p className="text-lg font-bold text-julius-text">{formatCurrency(transacao.valor, currency)}</p>
-          <p className="text-sm text-julius-muted">{getCategoryLabel(transacao.tag, locale)}</p>
+        <div className="min-w-0 flex-1">
+          <p className="text-xl font-semibold text-julius-text">{formatCurrency(transacao.valor)}</p>
+          <p className="truncate text-sm text-julius-muted">{display.name}</p>
         </div>
       </div>
 
-      <p className="mb-1 text-sm text-julius-text">{transacao.descricao}</p>
-      <p className="mb-4 text-xs text-julius-muted">{transacao.dia} {t.confirm.at} {transacao.hora}</p>
+      <p className="mb-1 text-sm font-medium text-julius-text">{transacao.descricao}</p>
+      <p className="mb-4 text-xs text-julius-muted">{transacao.dia} at {transacao.hora}</p>
 
       {correcting ? (
         <div className="space-y-2">
           <textarea
             value={correction}
             onChange={(e) => setCorrection(e.target.value)}
-            placeholder={t.confirm.correctionPlaceholder}
-            className="w-full rounded-lg bg-julius-bg px-3 py-2 text-sm text-julius-text placeholder:text-julius-muted focus:outline-none"
+            placeholder="What should Julius change?"
+            className="w-full rounded-xl border border-julius-border bg-julius-raised px-3 py-2 text-sm text-julius-text placeholder:text-julius-muted focus:outline-none"
             rows={2}
           />
           <div className="flex gap-2">
             <button
               onClick={() => setCorrecting(false)}
-              className="flex-1 rounded-lg bg-julius-bg py-2 text-sm font-medium text-julius-muted"
+              className="flex-1 rounded-xl border border-julius-border bg-julius-raised py-2 text-sm font-medium text-julius-muted transition hover:text-julius-text"
             >
-              {t.confirm.cancel ?? 'Cancelar'}
+              Cancel
             </button>
             <button
               onClick={handleCorrect}
               disabled={!correction.trim()}
-              className="flex-1 rounded-lg bg-julius-accent py-2 text-sm font-medium text-white disabled:opacity-50"
+              className="flex-1 rounded-xl bg-julius-accent py-2 text-sm font-medium text-julius-on-accent transition disabled:opacity-45"
             >
-              {t.confirm.sendCorrection}
+              Send
             </button>
           </div>
         </div>
@@ -86,26 +101,18 @@ export function TransactionConfirm({ transacao, onConfirm, onCorrect }: Transact
         <div className="flex gap-2">
           <button
             onClick={() => setCorrecting(true)}
-            className="flex-1 rounded-lg bg-julius-bg py-2.5 text-sm font-medium text-julius-muted"
+            className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-julius-border bg-julius-raised py-2.5 text-sm font-medium text-julius-muted transition hover:text-julius-text"
           >
-            {t.confirm.correctButton}
+            <PencilLine className="h-4 w-4" />
+            Correct
           </button>
           <button
             onClick={handleConfirm}
             disabled={confirming}
-            className="flex-1 rounded-lg bg-julius-success py-2.5 text-sm font-medium text-white disabled:opacity-60 flex items-center justify-center gap-2"
+            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-julius-success py-2.5 text-sm font-medium text-julius-on-accent transition active:scale-[0.98] disabled:opacity-60"
           >
-            {confirming ? (
-              <>
-                <svg className="h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
-                {t.confirm.saving}
-              </>
-            ) : (
-              t.confirm.confirmButton
-            )}
+            <Check className="h-4 w-4" />
+            {confirming ? 'Saving...' : 'Confirm'}
           </button>
         </div>
       )}

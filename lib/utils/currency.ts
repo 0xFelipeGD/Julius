@@ -1,27 +1,19 @@
 import type { Currency } from '@/lib/types'
 
-const LOCALE_MAP: Record<Currency, string> = {
-  EUR: 'pt-PT',
-  BRL: 'pt-BR',
-  USD: 'en-US',
-}
+export const DEFAULT_CURRENCY: Currency = 'EUR'
+export const DEFAULT_LOCALE = 'en-GB'
 
 export function formatCurrency(
   value: number,
-  currency: Currency = 'EUR',
+  currency: Currency = DEFAULT_CURRENCY,
   locale?: string
 ): string {
-  const defaultLocale = LOCALE_MAP[currency]
-  return new Intl.NumberFormat(locale ?? defaultLocale, {
+  return new Intl.NumberFormat(locale ?? DEFAULT_LOCALE, {
     style: 'currency',
     currency,
   }).format(value)
 }
 
-export function getCurrencySymbol(currency: Currency): string {
-  switch (currency) {
-    case 'BRL': return 'R$'
-    case 'USD': return '$'
-    default: return '€'
-  }
+export function getCurrencySymbol(_currency: Currency = DEFAULT_CURRENCY): string {
+  return '€'
 }
