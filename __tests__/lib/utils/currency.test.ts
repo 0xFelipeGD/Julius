@@ -9,13 +9,6 @@ describe('formatCurrency', () => {
     expect(result).toContain('€')
   })
 
-  it('formata BRL — contém o valor e o símbolo', () => {
-    const result = formatCurrency(12.5, 'BRL')
-    expect(result).toContain('12')
-    expect(result).toContain('50')
-    expect(result).toContain('R$')
-  })
-
   it('usa EUR por defeito', () => {
     expect(formatCurrency(5)).toContain('€')
   })
@@ -34,6 +27,5 @@ describe('formatCurrency', () => {
 
   it('retorna uma string não-vazia', () => {
     expect(formatCurrency(99.99, 'EUR').length).toBeGreaterThan(0)
-    expect(formatCurrency(99.99, 'BRL').length).toBeGreaterThan(0)
   })
 })

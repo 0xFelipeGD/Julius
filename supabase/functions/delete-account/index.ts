@@ -5,19 +5,38 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-function getUserIdFromJWT(jwt: string): string | null {
-  try {
-    const payload = jwt.split('.')[1]
-    if (!payload) return null
-    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/')
-    const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4)
-    const bytes = Uint8Array.from(atob(padded), (c) => c.charCodeAt(0))
-    const decoded = JSON.parse(new TextDecoder().decode(bytes))
-    return decoded.sub ?? null
-  } catch (e) {
-    console.error('JWT decode error:', e)
-    return null
-  }
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  })
+}
+
+async function getVerifiedUser(req: Request) {
+  const authHeader = req.headers.get('Authorization')
+  if (!authHeader?.startsWith('Bearer ')) return null
+
+  const jwt = authHeader.slice('Bearer '.length)
+  const authClient = createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+    { global: { headers: { Authorization: `Bearer ${jwt}` } } },
+  )
+
+  const { data, error } = await authClient.auth.getUser()
+  if (error || !data.user) return null
+  return data.user
+}
+
+async function deletePublicUserData(adminClient: ReturnType<typeof createClient>, userId: string) {
+  await adminClient.from('recurring_payments').update({ transaction_id: null }).eq('user_id', userId)
+  await adminClient.from('transacoes').delete().eq('user_id', userId)
+  await adminClient.from('recurring_payments').delete().eq('user_id', userId)
+  await adminClient.from('recurring_expenses').delete().eq('user_id', userId)
+  await adminClient.from('user_categories').delete().eq('user_id', userId)
+  await adminClient.from('chat_history').delete().eq('user_id', userId)
+  await adminClient.from('user_settings').delete().eq('user_id', userId)
+  await adminClient.from('admin_users').delete().eq('user_id', userId)
 }
 
 Deno.serve(async (req: Request) => {
@@ -25,44 +44,27 @@ Deno.serve(async (req: Request) => {
     return new Response('ok', { headers: corsHeaders })
   }
 
+  if (req.method !== 'POST') {
+    return json({ error: 'Method not allowed' }, 405)
+  }
+
   try {
-    const authHeader = req.headers.get('Authorization')
-    console.log('Authorization header present:', !!authHeader, 'length:', authHeader?.length)
-
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'No Authorization header' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
-
-    const jwt = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader
-    const userId = getUserIdFromJWT(jwt)
-    console.log('Extracted userId:', userId)
-
-    if (!userId) {
-      return new Response(JSON.stringify({ error: 'Invalid token' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
+    const user = await getVerifiedUser(req)
+    if (!user) return json({ error: 'Invalid session' }, 401)
 
     const adminClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     )
 
-    const { error: deleteError } = await adminClient.auth.admin.deleteUser(userId)
+    await deletePublicUserData(adminClient, user.id)
+
+    const { error: deleteError } = await adminClient.auth.admin.deleteUser(user.id)
     if (deleteError) throw deleteError
 
-    return new Response(JSON.stringify({ success: true }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
+    return json({ success: true })
   } catch (err) {
     console.error('delete-account error:', err)
-    return new Response(JSON.stringify({ error: 'Internal error' }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
+    return json({ error: 'Internal error' }, 500)
   }
 })

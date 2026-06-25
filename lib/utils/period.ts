@@ -24,7 +24,7 @@ export function getCalendarDays(periodo: Periodo, year: number, month?: number):
     case 'mes': {
       const firstDay = new Date(year, now.getMonth(), 1)
       const lastDay = new Date(year, now.getMonth() + 1, 0)
-      const end = today < lastDay ? today : lastDay
+      const end = year === now.getFullYear() && today < lastDay ? today : lastDay
       return Math.floor((end.getTime() - firstDay.getTime()) / (1000 * 60 * 60 * 24)) + 1
     }
 
@@ -32,14 +32,14 @@ export function getCalendarDays(periodo: Periodo, year: number, month?: number):
       const q = Math.floor(now.getMonth() / 3) * 3
       const firstDay = new Date(year, q, 1)
       const lastDay = new Date(year, q + 3, 0)
-      const end = today < lastDay ? today : lastDay
+      const end = year === now.getFullYear() && today < lastDay ? today : lastDay
       return Math.floor((end.getTime() - firstDay.getTime()) / (1000 * 60 * 60 * 24)) + 1
     }
 
     case 'total': {
       const firstDay = new Date(year, 0, 1)
       const lastDay = new Date(year, 11, 31)
-      const end = today < lastDay ? today : lastDay
+      const end = year === now.getFullYear() && today < lastDay ? today : lastDay
       return Math.floor((end.getTime() - firstDay.getTime()) / (1000 * 60 * 60 * 24)) + 1
     }
   }

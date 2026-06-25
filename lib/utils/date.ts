@@ -18,7 +18,7 @@ export function formatDate(
   if (date.getTime() === today.getTime()) return todayLabel ?? 'Hoje'
   if (date.getTime() === yesterday.getTime()) return yesterdayLabel ?? 'Ontem'
 
-  return date.toLocaleDateString(locale ?? 'pt-PT', { day: 'numeric', month: 'long' })
+  return date.toLocaleDateString(locale ?? 'en-GB', { day: 'numeric', month: 'long' })
 }
 
 export function formatTime(timeStr: string): string {

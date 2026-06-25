@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
-import type { Transacao, Periodo, Tag } from '@/lib/types'
+import type { Transacao, Periodo } from '@/lib/types'
 
 function getPeriodRange(periodo: Periodo, year: number, month?: number): { from: string; to: string } {
   if (month !== undefined && month !== null) {
@@ -48,23 +48,23 @@ function getPeriodRange(periodo: Periodo, year: number, month?: number): { from:
   }
 }
 
-export function useTransactions(periodo: Periodo, tag?: Tag, year?: number, month?: number) {
+export function useTransactions(periodo: Periodo, categoryId?: string, year?: number, month?: number) {
   const supabase = createClient()
   const effectiveYear = year ?? new Date().getFullYear()
 
   return useQuery<Transacao[]>({
-    queryKey: ['transactions', periodo, tag, effectiveYear, month],
+    queryKey: ['transactions', periodo, categoryId, effectiveYear, month],
     queryFn: async () => {
       const { from, to } = getPeriodRange(periodo, effectiveYear, month)
       let query = supabase
         .from('transacoes')
-        .select('*')
+        .select('*, category:user_categories(*)')
         .gte('dia', from)
         .lte('dia', to)
         .order('dia', { ascending: false })
         .order('hora', { ascending: false })
 
-      if (tag) query = query.eq('tag', tag)
+      if (categoryId) query = query.eq('category_id', categoryId)
 
       const { data, error } = await query
       if (error) throw error
@@ -99,7 +99,7 @@ export function useUpdateTransaction() {
       updates,
     }: {
       id: string
-      updates: Partial<Pick<Transacao, 'valor' | 'tag' | 'descricao' | 'dia'>>
+      updates: Partial<Pick<Transacao, 'valor' | 'category_id' | 'tag' | 'descricao' | 'dia'>>
     }) => {
       const { error } = await supabase.from('transacoes').update(updates).eq('id', id)
       if (error) throw error

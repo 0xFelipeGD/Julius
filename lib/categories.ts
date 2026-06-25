@@ -1,73 +1,126 @@
-/**
- * FONTE ÚNICA DE CATEGORIAS
- *
- * Para adicionar ou remover categorias, edita APENAS este ficheiro.
- * Todos os outros ficheiros importam daqui automaticamente.
- *
- * Exemplo para adicionar "Vestuario":
- *   { value: 'Vestuario', label: 'Vestuário', color: '#EC4899' }
- *
- * Lembra-te também de:
- *   1. Adicionar o valor ao tipo Tag em lib/types/index.ts
- *   2. Adicionar o valor às TAGS DISPONÍVEIS no prompt do Julius em
- *      supabase/functions/julius-chat/index.ts (linha JULIUS_SYSTEM_PROMPT)
- */
+import type { Category, LegacyTag } from '@/lib/types'
 
-import type { Tag } from '@/lib/types'
-
-export const CATEGORIES: {
-  value: Tag
-  label: string
+export interface DefaultCategory {
+  value: LegacyTag
+  name: string
   color: string
-  emoji: string
-  bgClass: string
-  bgMutedClass: string
-  textClass: string
-  labels: Record<string, string>
-}[] = [
-  { value: 'Alimentacao', label: 'Alimentação', color: '#16A34A', emoji: '🍽️', bgClass: 'bg-green-600', bgMutedClass: 'bg-green-600/20', textClass: 'text-green-500', labels: { 'pt-PT': 'Alimentação', 'pt-BR': 'Alimentação', 'en-GB': 'Food', 'en-US': 'Food' } },
-  { value: 'Transporte',  label: 'Transporte',  color: '#2563EB', emoji: '🚗', bgClass: 'bg-blue-600',  bgMutedClass: 'bg-blue-600/20',  textClass: 'text-blue-500',  labels: { 'pt-PT': 'Transporte', 'pt-BR': 'Transporte', 'en-GB': 'Transport', 'en-US': 'Transport' } },
-  { value: 'Saude',       label: 'Saúde',        color: '#DC2626', emoji: '🏥', bgClass: 'bg-red-600',   bgMutedClass: 'bg-red-600/20',   textClass: 'text-red-500',   labels: { 'pt-PT': 'Saúde', 'pt-BR': 'Saúde', 'en-GB': 'Health', 'en-US': 'Health' } },
-  { value: 'Lazer',       label: 'Lazer',        color: '#9333EA', emoji: '🎮', bgClass: 'bg-purple-600', bgMutedClass: 'bg-purple-600/20', textClass: 'text-purple-500', labels: { 'pt-PT': 'Lazer', 'pt-BR': 'Lazer', 'en-GB': 'Leisure', 'en-US': 'Leisure' } },
-  { value: 'Habitacao',   label: 'Habitação',    color: '#CA8A04', emoji: '🏠', bgClass: 'bg-yellow-600', bgMutedClass: 'bg-yellow-600/20', textClass: 'text-yellow-500', labels: { 'pt-PT': 'Habitação', 'pt-BR': 'Habitação', 'en-GB': 'Housing', 'en-US': 'Housing' } },
-  { value: 'Impostos',    label: 'Impostos',     color: '#0891B2', emoji: '🏛️', bgClass: 'bg-cyan-600',  bgMutedClass: 'bg-cyan-600/20',  textClass: 'text-cyan-500',  labels: { 'pt-PT': 'Impostos', 'pt-BR': 'Impostos', 'en-GB': 'Taxes', 'en-US': 'Taxes' } },
-  { value: 'Outros',      label: 'Outros',       color: '#64748B', emoji: '📦', bgClass: 'bg-slate-500', bgMutedClass: 'bg-slate-600/20', textClass: 'text-slate-400', labels: { 'pt-PT': 'Outros', 'pt-BR': 'Outros', 'en-GB': 'Other', 'en-US': 'Other' } },
+  icon: string
+  sort_order: number
+  is_fallback?: boolean
+}
+
+export const DEFAULT_CATEGORIES: DefaultCategory[] = [
+  { value: 'Alimentacao', name: 'Food', color: '#2F9E6D', icon: 'utensils', sort_order: 10 },
+  { value: 'Transporte', name: 'Transport', color: '#3B76D1', icon: 'car', sort_order: 20 },
+  { value: 'Saude', name: 'Health', color: '#D95B59', icon: 'heart-pulse', sort_order: 30 },
+  { value: 'Lazer', name: 'Leisure', color: '#7551C8', icon: 'sparkles', sort_order: 40 },
+  { value: 'Habitacao', name: 'Housing', color: '#B8872D', icon: 'home', sort_order: 50 },
+  { value: 'Impostos', name: 'Taxes', color: '#218DA3', icon: 'landmark', sort_order: 60 },
+  { value: 'Outros', name: 'Other', color: '#7C8191', icon: 'archive', sort_order: 70, is_fallback: true },
 ]
 
-export const ALL_TAGS: Tag[] = CATEGORIES.map((c) => c.value)
+export const CATEGORIES = DEFAULT_CATEGORIES.map((category) => ({
+  value: category.value,
+  label: category.name,
+  color: category.color,
+  emoji: iconToEmoji(category.icon),
+  bgClass: 'bg-category-soft',
+  bgMutedClass: 'bg-category-soft/70',
+  textClass: 'text-category',
+  labels: { 'en-GB': category.name },
+}))
+
+export const ALL_TAGS: LegacyTag[] = DEFAULT_CATEGORIES.map((category) => category.value)
 
 export const CATEGORY_COLORS: Record<string, string> = Object.fromEntries(
-  CATEGORIES.map((c) => [c.value, c.color])
+  DEFAULT_CATEGORIES.map((category) => [category.value, category.color])
 )
 
 export const CATEGORY_LABELS: Record<string, string> = Object.fromEntries(
-  CATEGORIES.map((c) => [c.value, c.label])
+  DEFAULT_CATEGORIES.map((category) => [category.value, category.name])
 )
 
-export const CATEGORY_EMOJIS: Record<Tag, string> = Object.fromEntries(
-  CATEGORIES.map((c) => [c.value, c.emoji])
-) as Record<Tag, string>
+export const CATEGORY_EMOJIS: Record<LegacyTag, string> = Object.fromEntries(
+  DEFAULT_CATEGORIES.map((category) => [category.value, iconToEmoji(category.icon)])
+) as Record<LegacyTag, string>
 
-export const CATEGORY_BG: Record<Tag, string> = Object.fromEntries(
-  CATEGORIES.map((c) => [c.value, c.bgClass])
-) as Record<Tag, string>
+export const CATEGORY_BG: Record<LegacyTag, string> = Object.fromEntries(
+  DEFAULT_CATEGORIES.map((category) => [category.value, 'bg-category-soft'])
+) as Record<LegacyTag, string>
 
-export const CATEGORY_BG_MUTED: Record<Tag, string> = Object.fromEntries(
-  CATEGORIES.map((c) => [c.value, c.bgMutedClass])
-) as Record<Tag, string>
+export const CATEGORY_BG_MUTED: Record<LegacyTag, string> = Object.fromEntries(
+  DEFAULT_CATEGORIES.map((category) => [category.value, 'bg-category-soft/70'])
+) as Record<LegacyTag, string>
 
-export const CATEGORY_TEXT: Record<Tag, string> = Object.fromEntries(
-  CATEGORIES.map((c) => [c.value, c.textClass])
-) as Record<Tag, string>
+export const CATEGORY_TEXT: Record<LegacyTag, string> = Object.fromEntries(
+  DEFAULT_CATEGORIES.map((category) => [category.value, 'text-category'])
+) as Record<LegacyTag, string>
 
-/**
- * Get localised label for a category
- * @param tag - the category tag value
- * @param locale - BCP 47 locale string (e.g. 'pt-PT', 'en-GB')
- */
-export function getCategoryLabel(tag: Tag, locale?: string): string {
-  const cat = CATEGORIES.find((c) => c.value === tag)
-  if (!cat) return tag
-  if (locale && cat.labels[locale]) return cat.labels[locale]
-  return cat.label
+export function normalizeCategoryName(name: string): string {
+  return name.trim().toLowerCase().replace(/\s+/g, ' ')
+}
+
+export function getDefaultCategory(tag: LegacyTag | string | null | undefined): DefaultCategory {
+  return DEFAULT_CATEGORIES.find((category) => category.value === tag) ?? getFallbackDefaultCategory()
+}
+
+export function getFallbackDefaultCategory(): DefaultCategory {
+  return DEFAULT_CATEGORIES.find((category) => category.is_fallback) ?? DEFAULT_CATEGORIES[DEFAULT_CATEGORIES.length - 1]
+}
+
+export function getCategoryLabel(tag: LegacyTag | string | null | undefined): string {
+  return getDefaultCategory(tag).name
+}
+
+export function toCategorySeed(userId: string, category: DefaultCategory) {
+  return {
+    user_id: userId,
+    name: category.name,
+    normalized_name: normalizeCategoryName(category.name),
+    color: category.color,
+    icon: category.icon,
+    sort_order: category.sort_order,
+    legacy_tag: category.value,
+    is_fallback: Boolean(category.is_fallback),
+  }
+}
+
+export function getCategoryDisplay(category?: Category | null, legacyTag?: LegacyTag | string | null) {
+  if (category) {
+    return {
+      id: category.id,
+      name: category.name,
+      color: category.color,
+      icon: category.icon,
+      isFallback: category.is_fallback,
+    }
+  }
+
+  const fallback = getDefaultCategory(legacyTag)
+  return {
+    id: fallback.value,
+    name: fallback.name,
+    color: fallback.color,
+    icon: fallback.icon,
+    isFallback: Boolean(fallback.is_fallback),
+  }
+}
+
+export function iconToEmoji(icon: string): string {
+  switch (icon) {
+    case 'utensils':
+      return '🍽'
+    case 'car':
+      return '🚗'
+    case 'heart-pulse':
+      return '♡'
+    case 'sparkles':
+      return '✦'
+    case 'home':
+      return '⌂'
+    case 'landmark':
+      return '€'
+    default:
+      return '•'
+  }
 }

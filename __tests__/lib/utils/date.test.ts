@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest'
 import { formatTime, formatDayMonth } from '@/lib/utils/date'
+import {
+  getCurrentMonthKeyInTimezone,
+  getCurrentMonthStartISO,
+  getNextMonthBoundaryISO,
+} from '@/lib/utils/timezone'
 
 describe('formatTime', () => {
   it('retorna HH:MM de uma string HH:MM:SS', () => {
@@ -26,5 +31,21 @@ describe('formatDayMonth', () => {
 
   it('formata Dezembro correctamente', () => {
     expect(formatDayMonth('2026-12-31')).toBe('31/12')
+  })
+})
+
+describe('timezone month boundaries', () => {
+  it('uses the selected timezone to decide the current month', () => {
+    const instant = new Date('2026-06-30T22:30:00.000Z')
+
+    expect(getCurrentMonthKeyInTimezone('Europe/Berlin', instant)).toBe('2026-07')
+    expect(getCurrentMonthKeyInTimezone('Europe/Lisbon', instant)).toBe('2026-06')
+  })
+
+  it('returns UTC instants for local month boundaries', () => {
+    const instant = new Date('2026-06-30T22:30:00.000Z')
+
+    expect(getCurrentMonthStartISO('Europe/Berlin', instant)).toBe('2026-06-30T22:00:00.000Z')
+    expect(getNextMonthBoundaryISO('Europe/Berlin', instant)).toBe('2026-07-31T22:00:00.000Z')
   })
 })

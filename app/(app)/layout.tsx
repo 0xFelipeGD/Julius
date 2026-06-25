@@ -1,5 +1,4 @@
 import { AppShell } from '@/components/AppShell'
-import { RegionGate } from '@/components/RegionGate'
 
 export default function AppLayout({
   children,
@@ -8,9 +7,7 @@ export default function AppLayout({
 }) {
   return (
     <AppShell>
-      <RegionGate>
-        {children}
-      </RegionGate>
+      {children}
     </AppShell>
   )
 }

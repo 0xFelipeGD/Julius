@@ -45,11 +45,11 @@ export function TransactionList({ transactions, isLoading, onDelete, onEdit }: T
   if (transactions.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center px-8">
-        <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-julius-card">
-          <span className="text-2xl">🤔</span>
+        <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-julius-card">
+          <span className="text-2xl">€</span>
         </div>
         <p className="text-sm text-julius-muted">
-          Ou não gastaste nada, ou estás a esconder-me alguma coisa.
+          No transactions match this view.
         </p>
       </div>
     )
@@ -63,8 +63,8 @@ export function TransactionList({ transactions, isLoading, onDelete, onEdit }: T
         const dayTotal = items.reduce((sum, t) => sum + Number(t.valor), 0)
         return (
           <div key={dia}>
-            <div className="flex items-center justify-between px-4 py-2 bg-julius-bg/50">
-              <p className="text-xs font-medium text-julius-muted">{formatDate(dia)}</p>
+            <div className="flex items-center justify-between bg-julius-bg/60 px-4 py-2">
+              <p className="text-xs font-medium text-julius-muted">{formatDate(dia, 'en-GB', 'Today', 'Yesterday')}</p>
               <p className="text-xs font-medium text-julius-muted">{formatCurrency(dayTotal, currency)}</p>
             </div>
             {items.map((t) => (
