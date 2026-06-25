@@ -10,6 +10,7 @@ const withPWA = withPWAInit({
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // Development can use Turbopack; production builds use webpack because next-pwa emits via webpack.
   turbopack: {},
 };
 
