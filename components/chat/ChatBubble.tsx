@@ -10,6 +10,7 @@ interface ChatBubbleProps {
 
 export function ChatBubble({ message, onConfirm, onCorrect }: ChatBubbleProps) {
   const isUser = message.role === 'user'
+  const hasPendingTransaction = Boolean(message.transacao_pendente && onConfirm && onCorrect)
   const time = new Date(message.created_at).toLocaleTimeString('en-GB', {
     hour: '2-digit',
     minute: '2-digit',
@@ -22,9 +23,9 @@ export function ChatBubble({ message, onConfirm, onCorrect }: ChatBubbleProps) {
           <Bot className="h-4 w-4" strokeWidth={1.9} />
         </div>
       )}
-      <div className="min-w-0 max-w-[82%]">
+      <div className={`min-w-0 ${hasPendingTransaction ? 'w-[calc(100%-2.5rem)] max-w-sm' : 'max-w-[82%]'}`}>
         <div
-          className={`rounded-2xl px-4 py-2.5 shadow-[0_10px_28px_rgba(56,42,77,0.08)] ${
+          className={`w-fit max-w-full rounded-2xl px-4 py-2.5 shadow-[0_10px_28px_rgba(56,42,77,0.08)] ${
             isUser
               ? 'rounded-br-md bg-julius-accent text-julius-on-accent'
               : 'rounded-bl-md bg-julius-card text-julius-text'
@@ -34,7 +35,7 @@ export function ChatBubble({ message, onConfirm, onCorrect }: ChatBubbleProps) {
             {message.content || 'Julius had trouble reading that.'}
           </p>
         </div>
-        {message.transacao_pendente && onConfirm && onCorrect && (
+        {hasPendingTransaction && message.transacao_pendente && onConfirm && onCorrect && (
           <div className="mt-2">
             <TransactionConfirm
               transacao={message.transacao_pendente}

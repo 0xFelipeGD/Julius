@@ -55,7 +55,7 @@ export function TransactionConfirm({ transacao, onConfirm, onCorrect }: Transact
   }
 
   return (
-    <div className="max-w-full rounded-2xl border border-julius-border bg-julius-card p-4 shadow-[0_16px_36px_rgba(56,42,77,0.10)]">
+    <div className="w-full max-w-full rounded-2xl border border-julius-border bg-julius-card p-4 shadow-[0_16px_36px_rgba(56,42,77,0.10)]">
       <div className="mb-3 flex items-center gap-3">
         <div
           className="flex h-11 w-11 items-center justify-center rounded-2xl text-lg"
@@ -81,38 +81,38 @@ export function TransactionConfirm({ transacao, onConfirm, onCorrect }: Transact
             className="w-full rounded-xl border border-julius-border bg-julius-raised px-3 py-2 text-sm text-julius-text placeholder:text-julius-muted focus:outline-none [overflow-wrap:anywhere]"
             rows={2}
           />
-          <div className="flex gap-2">
+          <div className="grid grid-cols-2 gap-2">
             <button
               onClick={() => setCorrecting(false)}
-              className="min-w-0 flex-1 rounded-xl border border-julius-border bg-julius-raised py-2 text-sm font-medium text-julius-muted transition hover:text-julius-text"
+              className="min-h-11 min-w-0 rounded-xl border border-julius-border bg-julius-raised px-3 py-2 text-sm font-medium text-julius-muted transition hover:text-julius-text"
             >
-              Cancel
+              <span className="block truncate whitespace-nowrap">Cancel</span>
             </button>
             <button
               onClick={handleCorrect}
               disabled={!correction.trim()}
-              className="min-w-0 flex-1 rounded-xl bg-julius-accent py-2 text-sm font-medium text-julius-on-accent transition disabled:opacity-45"
+              className="min-h-11 min-w-0 rounded-xl bg-julius-accent px-3 py-2 text-sm font-medium text-julius-on-accent transition disabled:opacity-45"
             >
-              Send
+              <span className="block truncate whitespace-nowrap">Send</span>
             </button>
           </div>
         </div>
       ) : (
-        <div className="flex gap-2">
+        <div className="grid grid-cols-2 gap-2">
           <button
             onClick={() => setCorrecting(true)}
-            className="flex min-w-0 flex-1 items-center justify-center gap-2 rounded-xl border border-julius-border bg-julius-raised py-2.5 text-sm font-medium text-julius-muted transition hover:text-julius-text"
+            className="flex min-h-11 min-w-0 items-center justify-center gap-2 rounded-xl border border-julius-border bg-julius-raised px-3 py-2.5 text-sm font-medium text-julius-muted transition hover:text-julius-text"
           >
             <PencilLine className="h-4 w-4 shrink-0" />
-            <span className="truncate">Correct</span>
+            <span className="min-w-0 truncate whitespace-nowrap">Correct</span>
           </button>
           <button
             onClick={handleConfirm}
             disabled={confirming}
-            className="flex min-w-0 flex-1 items-center justify-center gap-2 rounded-xl bg-julius-success py-2.5 text-sm font-medium text-julius-on-accent transition active:scale-[0.98] disabled:opacity-60"
+            className="flex min-h-11 min-w-0 items-center justify-center gap-2 rounded-xl bg-julius-success px-3 py-2.5 text-sm font-medium text-julius-on-accent transition active:scale-[0.98] disabled:opacity-60"
           >
             <Check className="h-4 w-4 shrink-0" />
-            <span className="truncate">{confirming ? 'Saving...' : 'Confirm'}</span>
+            <span className="min-w-0 truncate whitespace-nowrap">{confirming ? 'Saving...' : 'Confirm'}</span>
           </button>
         </div>
       )}
