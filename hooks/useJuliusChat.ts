@@ -71,6 +71,17 @@ function findCategory(categories: Category[], transacao: TransacaoPendente): Cat
   )
 }
 
+function isSamePendingTransaction(a: TransacaoPendente | undefined, b: TransacaoPendente): boolean {
+  if (!a) return false
+
+  return (
+    Number(a.valor) === Number(b.valor) &&
+    a.descricao === b.descricao &&
+    a.dia === b.dia &&
+    a.hora === b.hora
+  )
+}
+
 export function useJuliusChat() {
   const { chatMessages, chatHistoryKey, setChatMessages, setChatHistoryKey, addChatMessage } = useAppStore()
   const { timezone } = useUserSettingsStore()
@@ -292,9 +303,18 @@ export function useJuliusChat() {
       created_at: new Date().toISOString(),
     }
 
+    const { error: historyError } = await supabase.from('chat_history').insert({
+      user_id: session.user.id,
+      role: confirmMsg.role,
+      content: confirmMsg.content,
+      tipo: confirmMsg.tipo,
+      expires_at: getNextMonthBoundaryISO(timezone),
+    })
+    if (historyError) console.error('[Julius] confirm history error:', historyError)
+
     const currentMessages = useAppStore.getState().chatMessages
     const updated = currentMessages.map((message) =>
-      message.transacao_pendente === transacao
+      isSamePendingTransaction(message.transacao_pendente, transacao)
         ? { ...message, transacao_pendente: undefined }
         : message
     )

@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { buildPrompt } from './prompts.ts'
+import { normalizeExpenseAmountText } from './normalize.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -110,6 +111,7 @@ Deno.serve(async (req: Request) => {
     const effectiveCategories = await loadUserCategories(req, categories)
     const current = getLocalParts(timezone)
     const systemPrompt = `${buildPrompt(effectiveCategories)}\n\nCurrent local date and time: ${current.date} at ${current.time}.`
+    const modelMessage = normalizeExpenseAmountText(trimmedMessage)
     const messages: Array<{ role: string; content: string }> = [
       { role: 'system', content: systemPrompt },
     ]
@@ -123,7 +125,7 @@ Deno.serve(async (req: Request) => {
 
     messages.push({
       role: 'user',
-      content: `[TODAY IS ${current.date} at ${current.time}] ${trimmedMessage}`,
+      content: `[TODAY IS ${current.date} at ${current.time}] ${modelMessage}`,
     })
 
     const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {

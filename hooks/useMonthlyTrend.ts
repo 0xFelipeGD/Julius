@@ -8,11 +8,12 @@ export interface MonthlyTrendPoint {
   total: number
 }
 
-export function useMonthlyTrend(year: number, categoryId?: string) {
+export function useMonthlyTrend(year: number, categoryIds?: string[]) {
   const supabase = createClient()
+  const categoryFilterKey = categoryIds?.length ? [...categoryIds].sort().join(',') : 'all'
 
   return useQuery<MonthlyTrendPoint[]>({
-    queryKey: ['monthly-trend', year, categoryId],
+    queryKey: ['monthly-trend', year, categoryFilterKey],
     queryFn: async () => {
       let query = supabase
         .from('transacoes')
@@ -20,7 +21,7 @@ export function useMonthlyTrend(year: number, categoryId?: string) {
         .gte('dia', `${year}-01-01`)
         .lte('dia', `${year}-12-31`)
 
-      if (categoryId) query = query.eq('category_id', categoryId)
+      if (categoryIds?.length) query = query.in('category_id', categoryIds)
 
       const { data, error } = await query
       if (error) throw error

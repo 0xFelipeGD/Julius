@@ -22,7 +22,7 @@ export function ChatBubble({ message, onConfirm, onCorrect }: ChatBubbleProps) {
           <Bot className="h-4 w-4" strokeWidth={1.9} />
         </div>
       )}
-      <div className="max-w-[82%]">
+      <div className="min-w-0 max-w-[82%]">
         <div
           className={`rounded-2xl px-4 py-2.5 shadow-[0_10px_28px_rgba(56,42,77,0.08)] ${
             isUser
@@ -30,7 +30,7 @@ export function ChatBubble({ message, onConfirm, onCorrect }: ChatBubbleProps) {
               : 'rounded-bl-md bg-julius-card text-julius-text'
           }`}
         >
-          <p className="whitespace-pre-wrap text-sm leading-relaxed">
+          <p className="whitespace-pre-wrap break-words text-sm leading-relaxed [overflow-wrap:anywhere]">
             {message.content || 'Julius had trouble reading that.'}
           </p>
         </div>

@@ -1,6 +1,6 @@
 'use client'
 
-import { ImagePlus, LogOut, Plus, Shield, Trash2, UserRound, X } from 'lucide-react'
+import { GripVertical, ImagePlus, LogOut, Plus, Shield, Trash2, UserRound, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { CategoryIcon, CATEGORY_ICON_OPTIONS } from '@/components/CategoryIcon'
 import { InstallJuliusAction } from '@/components/InstallJuliusAction'
@@ -269,25 +269,115 @@ function CategoryEditSheet({
   )
 }
 
+function reorderCategoryList(categories: Category[], activeId: string, targetIndex: number): Category[] {
+  const fromIndex = categories.findIndex((category) => category.id === activeId)
+  if (fromIndex < 0) return categories
+
+  const next = [...categories]
+  const [active] = next.splice(fromIndex, 1)
+  const adjustedTarget = fromIndex < targetIndex ? targetIndex - 1 : targetIndex
+  const insertIndex = Math.max(0, Math.min(next.length, adjustedTarget))
+  next.splice(insertIndex, 0, active)
+  return next
+}
+
+function isSameCategoryOrder(a: Category[], b: Category[]): boolean {
+  return a.length === b.length && a.every((category, index) => category.id === b[index]?.id)
+}
+
 function CategoriesSection() {
-  const { categories, createCategory, updateCategory, deleteCategory } = useCategories()
+  const { categories, createCategory, updateCategory, deleteCategory, reorderCategories } = useCategories()
   const [editingId, setEditingId] = useState<string | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Category | null>(null)
+  const [orderedCategories, setOrderedCategories] = useState<Category[]>(categories)
+  const [draggingId, setDraggingId] = useState<string | null>(null)
+  const orderedRef = useRef<Category[]>(categories)
+  const draggingIdRef = useRef<string | null>(null)
   const editingCategory = useMemo(
     () => categories.find((category) => category.id === editingId) ?? null,
     [categories, editingId]
   )
+
+  useEffect(() => {
+    orderedRef.current = categories
+    setOrderedCategories(categories)
+  }, [categories])
+
+  function setOrdered(next: Category[]) {
+    orderedRef.current = next
+    setOrderedCategories(next)
+  }
 
   function handleDelete(category: Category) {
     if (category.is_fallback) return
     setDeleteTarget(category)
   }
 
+  function handleDragStart(event: React.PointerEvent<HTMLButtonElement>, categoryId: string) {
+    if (reorderCategories.isPending) return
+    draggingIdRef.current = categoryId
+    setDraggingId(categoryId)
+    event.currentTarget.setPointerCapture(event.pointerId)
+  }
+
+  function handleDragMove(event: React.PointerEvent<HTMLButtonElement>) {
+    const activeId = draggingIdRef.current
+    if (!activeId) return
+
+    const target = document.elementFromPoint(event.clientX, event.clientY)
+    const row = target instanceof HTMLElement
+      ? target.closest('[data-category-id]')
+      : null
+    if (!row) return
+
+    const overId = row?.getAttribute('data-category-id')
+    if (!overId || overId === activeId) return
+
+    const rect = row.getBoundingClientRect()
+    const overIndex = orderedRef.current.findIndex((category) => category.id === overId)
+    if (overIndex < 0) return
+
+    const targetIndex = event.clientY > rect.top + rect.height / 2 ? overIndex + 1 : overIndex
+    const next = reorderCategoryList(orderedRef.current, activeId, targetIndex)
+    if (!isSameCategoryOrder(next, orderedRef.current)) setOrdered(next)
+  }
+
+  function handleDragEnd(event: React.PointerEvent<HTMLButtonElement>) {
+    const activeId = draggingIdRef.current
+    draggingIdRef.current = null
+    setDraggingId(null)
+
+    try {
+      event.currentTarget.releasePointerCapture(event.pointerId)
+    } catch {}
+
+    if (!activeId || isSameCategoryOrder(orderedRef.current, categories)) return
+    reorderCategories.mutate(orderedRef.current.map((category) => category.id))
+  }
+
   return (
     <SettingsSection title="Categories">
       <div className="space-y-2">
-        {categories.map((category) => (
-          <div key={category.id} className="flex items-center gap-3 rounded-2xl bg-julius-raised px-3 py-3">
+        {orderedCategories.map((category) => (
+          <div
+            key={category.id}
+            data-category-id={category.id}
+            className={`flex items-center gap-2 rounded-2xl bg-julius-raised px-2 py-3 transition ${
+              draggingId === category.id ? 'bg-julius-accent-soft ring-2 ring-julius-accent/20' : ''
+            }`}
+          >
+            <button
+              type="button"
+              onPointerDown={(event) => handleDragStart(event, category.id)}
+              onPointerMove={handleDragMove}
+              onPointerUp={handleDragEnd}
+              onPointerCancel={handleDragEnd}
+              disabled={reorderCategories.isPending}
+              aria-label={`Reorder ${category.name}`}
+              className="flex h-10 w-8 shrink-0 touch-none items-center justify-center rounded-xl text-julius-muted transition hover:bg-julius-card hover:text-julius-text disabled:opacity-35"
+            >
+              <GripVertical className="h-4 w-4" />
+            </button>
             <div
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl"
               style={{ backgroundColor: `${category.color}22`, color: category.color }}
@@ -296,19 +386,19 @@ function CategoriesSection() {
             </div>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium text-julius-text">{category.name}</p>
-              <p className="text-xs text-julius-muted">{category.is_fallback ? 'Default fallback' : 'User category'}</p>
+              <p className="truncate text-xs text-julius-muted">{category.is_fallback ? 'Default fallback' : 'User category'}</p>
             </div>
             <button
               onClick={() => setEditingId(category.id)}
               disabled={category.is_fallback}
-              className="rounded-xl border border-julius-border px-3 py-2 text-xs font-medium text-julius-muted transition hover:text-julius-text disabled:opacity-35"
+              className="shrink-0 rounded-xl border border-julius-border px-3 py-2 text-xs font-medium text-julius-muted transition hover:text-julius-text disabled:opacity-35"
             >
               Edit
             </button>
             <button
               onClick={() => handleDelete(category)}
               disabled={category.is_fallback}
-              className="flex h-9 w-9 items-center justify-center rounded-xl border border-julius-danger/30 bg-julius-danger-soft text-julius-danger transition disabled:opacity-35"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-julius-danger/30 bg-julius-danger-soft text-julius-danger transition disabled:opacity-35"
               aria-label={`Delete ${category.name}`}
             >
               <Trash2 className="h-4 w-4" />

@@ -121,12 +121,13 @@ function fillMissingDays(stats: DayStats[], from: string, to: string): DayStats[
   return filled
 }
 
-export function useStats(periodo: Periodo, categoryId?: string, year?: number, month?: number) {
+export function useStats(periodo: Periodo, categoryIds?: string[], year?: number, month?: number) {
   const supabase = createClient()
   const effectiveYear = year ?? new Date().getFullYear()
+  const categoryFilterKey = categoryIds?.length ? [...categoryIds].sort().join(',') : 'all'
 
   return useQuery<{ dayStats: DayStats[]; total: number; average: number }>({
-    queryKey: ['stats', periodo, categoryId, effectiveYear, month],
+    queryKey: ['stats', periodo, categoryFilterKey, effectiveYear, month],
     queryFn: async () => {
       const { from, to } = getPeriodRange(periodo, effectiveYear, month)
       let query = supabase
@@ -136,7 +137,7 @@ export function useStats(periodo: Periodo, categoryId?: string, year?: number, m
         .lte('dia', to)
         .order('dia', { ascending: true })
 
-      if (categoryId) query = query.eq('category_id', categoryId)
+      if (categoryIds?.length) query = query.in('category_id', categoryIds)
 
       const { data, error } = await query
       if (error) throw error

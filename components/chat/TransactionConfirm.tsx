@@ -55,7 +55,7 @@ export function TransactionConfirm({ transacao, onConfirm, onCorrect }: Transact
   }
 
   return (
-    <div className="rounded-2xl border border-julius-border bg-julius-card p-4 shadow-[0_16px_36px_rgba(56,42,77,0.10)]">
+    <div className="max-w-full rounded-2xl border border-julius-border bg-julius-card p-4 shadow-[0_16px_36px_rgba(56,42,77,0.10)]">
       <div className="mb-3 flex items-center gap-3">
         <div
           className="flex h-11 w-11 items-center justify-center rounded-2xl text-lg"
@@ -64,13 +64,13 @@ export function TransactionConfirm({ transacao, onConfirm, onCorrect }: Transact
           <CategoryIcon icon={display.icon} className="h-5 w-5" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-xl font-semibold text-julius-text">{formatCurrency(transacao.valor)}</p>
+          <p className="break-words text-xl font-semibold text-julius-text [overflow-wrap:anywhere]">{formatCurrency(transacao.valor)}</p>
           <p className="truncate text-sm text-julius-muted">{display.name}</p>
         </div>
       </div>
 
-      <p className="mb-1 text-sm font-medium text-julius-text">{transacao.descricao}</p>
-      <p className="mb-4 text-xs text-julius-muted">{transacao.dia} at {transacao.hora}</p>
+      <p className="mb-1 break-words text-sm font-medium text-julius-text [overflow-wrap:anywhere]">{transacao.descricao}</p>
+      <p className="mb-4 break-words text-xs text-julius-muted [overflow-wrap:anywhere]">{transacao.dia} at {transacao.hora}</p>
 
       {correcting ? (
         <div className="space-y-2">
@@ -78,20 +78,20 @@ export function TransactionConfirm({ transacao, onConfirm, onCorrect }: Transact
             value={correction}
             onChange={(e) => setCorrection(e.target.value)}
             placeholder="What should Julius change?"
-            className="w-full rounded-xl border border-julius-border bg-julius-raised px-3 py-2 text-sm text-julius-text placeholder:text-julius-muted focus:outline-none"
+            className="w-full rounded-xl border border-julius-border bg-julius-raised px-3 py-2 text-sm text-julius-text placeholder:text-julius-muted focus:outline-none [overflow-wrap:anywhere]"
             rows={2}
           />
           <div className="flex gap-2">
             <button
               onClick={() => setCorrecting(false)}
-              className="flex-1 rounded-xl border border-julius-border bg-julius-raised py-2 text-sm font-medium text-julius-muted transition hover:text-julius-text"
+              className="min-w-0 flex-1 rounded-xl border border-julius-border bg-julius-raised py-2 text-sm font-medium text-julius-muted transition hover:text-julius-text"
             >
               Cancel
             </button>
             <button
               onClick={handleCorrect}
               disabled={!correction.trim()}
-              className="flex-1 rounded-xl bg-julius-accent py-2 text-sm font-medium text-julius-on-accent transition disabled:opacity-45"
+              className="min-w-0 flex-1 rounded-xl bg-julius-accent py-2 text-sm font-medium text-julius-on-accent transition disabled:opacity-45"
             >
               Send
             </button>
@@ -101,18 +101,18 @@ export function TransactionConfirm({ transacao, onConfirm, onCorrect }: Transact
         <div className="flex gap-2">
           <button
             onClick={() => setCorrecting(true)}
-            className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-julius-border bg-julius-raised py-2.5 text-sm font-medium text-julius-muted transition hover:text-julius-text"
+            className="flex min-w-0 flex-1 items-center justify-center gap-2 rounded-xl border border-julius-border bg-julius-raised py-2.5 text-sm font-medium text-julius-muted transition hover:text-julius-text"
           >
-            <PencilLine className="h-4 w-4" />
-            Correct
+            <PencilLine className="h-4 w-4 shrink-0" />
+            <span className="truncate">Correct</span>
           </button>
           <button
             onClick={handleConfirm}
             disabled={confirming}
-            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-julius-success py-2.5 text-sm font-medium text-julius-on-accent transition active:scale-[0.98] disabled:opacity-60"
+            className="flex min-w-0 flex-1 items-center justify-center gap-2 rounded-xl bg-julius-success py-2.5 text-sm font-medium text-julius-on-accent transition active:scale-[0.98] disabled:opacity-60"
           >
-            <Check className="h-4 w-4" />
-            {confirming ? 'Saving...' : 'Confirm'}
+            <Check className="h-4 w-4 shrink-0" />
+            <span className="truncate">{confirming ? 'Saving...' : 'Confirm'}</span>
           </button>
         </div>
       )}

@@ -74,12 +74,12 @@ export function CategoryBreakdown({ data, categories, isLoading }: CategoryBreak
             const percentage = Math.round((entry.amount / total) * 100)
             return (
               <div key={entry.key}>
-                <div className="mb-1 flex items-center justify-between gap-2">
+                <div className="mb-1 flex items-start justify-between gap-2">
                   <div className="flex min-w-0 items-center gap-1.5">
                     <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: entry.color }} />
                     <span className="truncate text-xs text-julius-muted">{entry.label}</span>
                   </div>
-                  <span className="shrink-0 text-xs font-medium text-julius-text">
+                  <span className="max-w-[56%] break-words text-right text-xs font-medium text-julius-text [overflow-wrap:anywhere]">
                     {formatCurrency(entry.amount)} <span className="text-julius-muted">{percentage}%</span>
                   </span>
                 </div>

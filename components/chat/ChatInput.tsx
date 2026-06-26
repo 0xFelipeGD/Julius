@@ -39,7 +39,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
       onSubmit={handleSubmit}
       className="border-t border-julius-border bg-julius-card px-3 py-3"
     >
-      <div className="flex items-end gap-2 rounded-2xl border border-julius-border bg-julius-raised px-2 py-2 shadow-[0_12px_32px_rgba(56,42,77,0.08)]">
+      <div className="flex min-w-0 items-end gap-2 rounded-2xl border border-julius-border bg-julius-raised px-2 py-2 shadow-[0_12px_32px_rgba(56,42,77,0.08)]">
         <textarea
           ref={textareaRef}
           value={text}
@@ -48,7 +48,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
           disabled={disabled}
           placeholder="Write to Julius..."
           rows={1}
-          className="max-h-28 min-h-10 flex-1 resize-none bg-transparent px-2 py-2 text-sm leading-5 text-julius-text placeholder:text-julius-muted focus:outline-none disabled:opacity-50"
+          className="max-h-28 min-h-10 min-w-0 flex-1 resize-none break-words bg-transparent px-2 py-2 text-sm leading-5 text-julius-text placeholder:text-julius-muted focus:outline-none disabled:opacity-50 [overflow-wrap:anywhere]"
         />
 
         <button

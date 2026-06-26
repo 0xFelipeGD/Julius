@@ -111,6 +111,37 @@ export function useCategories() {
     },
   })
 
+  const reorderCategories = useMutation({
+    mutationFn: async (orderedIds: string[]) => {
+      const current = queryClient.getQueryData<Category[]>(categoriesQueryKey) ?? []
+      const currentIds = new Set(current.map((category) => category.id))
+      const validOrderedIds = orderedIds.filter((id) => currentIds.has(id))
+
+      const { error } = await supabase.rpc('reorder_user_categories', { category_ids: validOrderedIds })
+      if (error) throw error
+    },
+    onMutate: async (orderedIds) => {
+      await queryClient.cancelQueries({ queryKey: categoriesQueryKey })
+      const previous = queryClient.getQueryData<Category[]>(categoriesQueryKey)
+      const position = new Map(orderedIds.map((id, index) => [id, index]))
+
+      queryClient.setQueryData<Category[]>(categoriesQueryKey, (current) => {
+        if (!current) return current
+        return [...current]
+          .sort((a, b) => (position.get(a.id) ?? Number.MAX_SAFE_INTEGER) - (position.get(b.id) ?? Number.MAX_SAFE_INTEGER))
+          .map((category, index) => ({ ...category, sort_order: (index + 1) * 10 }))
+      })
+
+      return { previous }
+    },
+    onError: (_error, _orderedIds, context) => {
+      if (context?.previous) queryClient.setQueryData(categoriesQueryKey, context.previous)
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: categoriesQueryKey })
+    },
+  })
+
   return {
     ...query,
     categories: query.data ?? [],
@@ -118,5 +149,6 @@ export function useCategories() {
     createCategory,
     updateCategory,
     deleteCategory,
+    reorderCategories,
   }
 }
